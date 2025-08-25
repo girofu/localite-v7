@@ -5,6 +5,7 @@
 
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Firebase 配置 (從環境變數載入)
 const firebaseConfig = {
@@ -19,14 +20,16 @@ const firebaseConfig = {
 // 初始化 Firebase
 let firebaseApp: FirebaseApp;
 let auth: Auth;
+let firestore: Firestore;
 
 try {
   firebaseApp = initializeApp(firebaseConfig);
   auth = getAuth(firebaseApp);
+  firestore = getFirestore(firebaseApp);
 } catch (error) {
   console.warn('Firebase 初始化失敗，使用 mock 模式:', error);
   // 在測試環境中使用 mock
 }
 
-export { firebaseApp, auth };
+export { firebaseApp, auth, firestore };
 export default firebaseConfig;
