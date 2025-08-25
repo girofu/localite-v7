@@ -1,0 +1,453 @@
+---
+description: 撰寫軟體時的指導原則
+alwaysApply: false
+---
+### Phase 2: TDD 開發循環
+
+#### 🎯 TDD 核心概念與原則
+
+**Test-Driven Development (TDD)** 是一種軟體開發方法論，遵循「測試先行」的核心理念。TDD 不只是測試策略，更是設計與開發的指導哲學。
+
+##### ✨ TDD 的三大核心原則
+
+1. **🚫 除非有失敗的單元測試，否則不撰寫任何生產代碼**
+
+   - 確保每一行代碼都有明確的存在理由
+   - 避免過度設計和不必要的複雜性
+   - 保證代碼的可測試性
+
+2. **⚡ 只撰寫剛好讓測試失敗的最少測試代碼**
+
+   - 一次只關注一個功能點
+   - 保持測試的簡潔和專注
+   - 避免測試過於複雜或覆蓋多個功能
+
+3. **🎯 只撰寫剛好讓測試通過的最少生產代碼**
+   - 避免過早優化
+   - 專注於解決當前問題
+   - 讓設計自然湧現
+
+##### 🔄 Red-Green-Refactor 循環詳解
+
+```mermaid
+graph LR
+    A[🔴 Red<br/>寫失敗測試] --> B[🟢 Green<br/>寫最小代碼]
+    B --> C[🔵 Refactor<br/>重構優化]
+    C --> A
+
+    A1[分析需求] --> A2[設計測試案例] --> A3[確認測試失敗]
+    B1[實作最小功能] --> B2[確認測試通過] --> B3[不破壞現有測試]
+    C1[改善代碼結構] --> C2[提升可讀性] --> C3[優化性能]
+```
+
+##### 💡 TDD 帶來的核心價值
+
+| 價值面向       | 具體效益          | 實踐方式                   |
+| -------------- | ----------------- | -------------------------- |
+| **設計品質**   | 迫使思考 API 設計 | 先寫測試等於先設計使用介面 |
+| **程式碼信心** | 重構時有安全保障  | 測試作為安全網，敢於改動   |
+| **需求理解**   | 測試即規格文件    | 測試案例明確表達預期行為   |
+| **回歸保護**   | 自動發現功能退化  | 持續執行測試套件           |
+| **開發效率**   | 減少 Debug 時間   | 問題快速定位到具體功能     |
+
+##### ⚠️ TDD 常見陷阱與解決方案
+
+| 陷阱             | 問題描述               | 解決方案                             |
+| ---------------- | ---------------------- | ------------------------------------ |
+| **測試先行恐懼** | 不知道如何開始寫測試   | 從最簡單的功能開始，一個輸入一個輸出 |
+| **過度測試**     | 為了覆蓋率寫無意義測試 | 專注於行為測試，而非代碼覆蓋         |
+| **測試耦合**     | 測試與實作細節過度耦合 | 測試公開介面，不測試私有方法         |
+| **忽略重構**     | 紅綠循環後不重構       | 設置重構檢查點，定期程式碼審查       |
+| **測試不夠小**   | 一次測試多個功能       | 一個測試只驗證一個行為               |
+
+##### 🛠️ TDD 最佳實踐指南
+
+1. **測試命名策略**
+
+   ```typescript
+   // ❌ 不好的命名
+   it("test createUser", () => {});
+
+   // ✅ 好的命名：描述行為和預期
+   it("should create user with hashed password when valid data provided", () => {});
+   it("should throw ValidationError when email format is invalid", () => {});
+   it("should return existing user when email already registered", () => {});
+   ```
+
+2. **測試結構：AAA 模式**
+
+   ```typescript
+   it("should calculate tour duration correctly", () => {
+     // Arrange（準備）：設置測試數據
+     const startTime = new Date("2025-01-15T10:00:00Z");
+     const endTime = new Date("2025-01-15T14:30:00Z");
+     const tour = new Tour({ startTime, endTime });
+
+     // Act（執行）：調用被測試的方法
+     const duration = tour.calculateDuration();
+
+     // Assert（斷言）：驗證結果
+     expect(duration).toBe(270); // 4.5 hours = 270 minutes
+   });
+   ```
+
+3. **測試數據管理**
+
+   ```typescript
+   // ✅ 使用 Factory Pattern 創建測試數據
+   const createTestUser = (overrides = {}) => ({
+     id: "user-123",
+     email: "test@example.com",
+     name: "Test User",
+     ...overrides,
+   });
+
+   // ✅ 使用有意義的測試數據
+   const invalidEmails = [
+     "plainaddress",
+     "@domain.com",
+     "user@",
+     "user..double.dot@domain.com",
+   ];
+   ```
+
+#### 2.1 🔴 紅色階段：撰寫失敗測試
+
+> **核心目標**：撰寫一個明確描述期望行為的測試，此時該測試必須失敗
+
+**Agent Prompt 啟動**：Testing Specialist Agent
+
+##### 🎯 紅色階段核心任務
+
+1. **需求分析**：將功能需求轉化為可測試的具體行為
+2. **測試設計**：設計清晰的測試案例，遵循單一職責原則
+3. **失敗確認**：確保測試因為預期的原因失敗（功能未實現）
+
+##### 📝 測試撰寫策略
+
+**Step 1: 確定測試目標**
+
+```typescript
+// 🤔 思考：這個功能應該做什麼？
+// - 輸入：旅遊標題
+// - 輸出：包含 AI 生成內容的旅遊物件
+// - 副作用：儲存到資料庫
+```
+
+**Step 2: 撰寫描述性測試**
+
+```typescript
+// 範例：為新功能撰寫測試
+describe("TourService", () => {
+  describe("createTour", () => {
+    it("should create a new tour with AI content", async () => {
+      // Arrange
+      const tourData = {
+        title: "Test Tour",
+        description: "A test tour description",
+      };
+
+      // Act
+      const result = await tourService.createTour(tourData);
+
+      // Assert
+      expect(result).toHaveProperty("id");
+      expect(result.title).toBe(tourData.title);
+      expect(result.aiContent).toBeDefined();
+      expect(typeof result.aiContent).toBe("string");
+      expect(result.createdAt).toBeInstanceOf(Date);
+    });
+
+    it("should throw error when title is empty", async () => {
+      // Arrange
+      const invalidTourData = { title: "" };
+
+      // Act & Assert
+      await expect(tourService.createTour(invalidTourData)).rejects.toThrow(
+        "Tour title cannot be empty"
+      );
+    });
+  });
+});
+```
+
+**Step 3: 執行測試確認失敗**
+
+```bash
+npm test -- --testNamePattern="should create a new tour"
+# 預期結果：❌ Test Failed
+# 失敗原因：TourService 或 createTour 方法尚未實現
+```
+
+##### ✅ 紅色階段檢查清單
+
+- [ ] 測試名稱清楚描述預期行為
+- [ ] 測試只關注一個具體功能
+- [ ] 測試包含完整的 AAA 結構（Arrange, Act, Assert）
+- [ ] 測試因為正確的原因失敗（功能未實現，而非語法錯誤）
+- [ ] 邊界條件和錯誤情況都有對應測試
+- [ ] 測試是可讀且自解釋的
+
+#### 2.2 🟢 綠色階段：實作最小程式碼
+
+> **核心目標**：撰寫剛好能讓測試通過的最簡單代碼，避免過度設計
+
+**Agent Prompt 切換**：根據實作內容選擇
+
+- Frontend: Frontend Development Agent
+- Backend: Backend Development Agent
+- Database: Database Design Agent
+
+##### 🎯 綠色階段核心任務
+
+1. **最小實現**：只實現讓測試通過所需的最少代碼
+2. **快速迭代**：優先讓測試通過，暫緩優化和抽象
+3. **保持簡單**：使用最直接的解決方案，避免過早抽象
+
+##### 🔨 實作策略指南
+
+**Step 1: 硬編碼解決方案（如果適用）**
+
+```typescript
+// 🚀 第一版：讓測試通過的最簡實現
+class TourService {
+  async createTour(data: CreateTourDto): Promise<Tour> {
+    // 驗證輸入
+    if (!data.title || data.title.trim() === "") {
+      throw new Error("Tour title cannot be empty");
+    }
+
+    // 最小實現：硬編碼但滿足測試需求
+    const tour = {
+      id: "tour-" + Date.now(), // 簡單的 ID 生成
+      title: data.title,
+      aiContent: "AI generated content for " + data.title, // 假的 AI 內容
+      createdAt: new Date(),
+    };
+
+    return tour;
+  }
+}
+```
+
+**Step 2: 逐步增加真實實現**
+
+```typescript
+// 🔄 第二版：引入真實依賴但保持簡單
+class TourService {
+  constructor(private aiService: AIService) {}
+
+  async createTour(data: CreateTourDto): Promise<Tour> {
+    if (!data.title || data.title.trim() === "") {
+      throw new Error("Tour title cannot be empty");
+    }
+
+    const tour = new Tour();
+    tour.id = generateId();
+    tour.title = data.title;
+    tour.aiContent = await this.aiService.generateContent(data.title);
+    tour.createdAt = new Date();
+
+    return tour;
+  }
+}
+```
+
+**Step 3: 執行測試確認通過**
+
+```bash
+npm test -- --testNamePattern="should create a new tour"
+# 預期結果：✅ Test Passed
+
+# 同時確認沒有破壞現有測試
+npm test
+# 預期結果：All tests should pass
+```
+
+##### 🚨 綠色階段常見錯誤
+
+| 錯誤行為     | 問題                   | 正確做法                     |
+| ------------ | ---------------------- | ---------------------------- |
+| **過度設計** | 一次實現太多功能       | 只實現讓測試通過的功能       |
+| **過早抽象** | 立即創建介面和抽象類別 | 等到有重複時再抽象           |
+| **完美主義** | 追求完美的代碼結構     | 先讓測試通過，重構階段再優化 |
+| **功能蔓延** | 順手實現額外功能       | 嚴格遵守測試規格             |
+
+##### ✅ 綠色階段檢查清單
+
+- [ ] 所有新撰寫的測試都通過
+- [ ] 沒有破壞任何現有測試
+- [ ] 只實現了讓測試通過所需的功能
+- [ ] 代碼是最簡單的可行解決方案
+- [ ] 沒有添加測試未要求的額外功能
+- [ ] 編譯無錯誤，程式可以執行
+
+#### 2.3 🔵 重構階段：優化程式碼
+
+> **核心目標**：在測試保護下改善代碼結構、可讀性和設計，但不改變外部行為
+
+**Agent Prompt 協助**：對應領域的 Agent + Testing Specialist
+
+##### 🎯 重構階段核心任務
+
+1. **改善設計**：提升代碼的結構和可維護性
+2. **消除重複**：DRY 原則 (Don't Repeat Yourself)
+3. **提升可讀性**：讓代碼更容易理解
+4. **性能優化**：在不改變行為的前提下提升效率
+
+##### 🔧 重構策略與技巧
+
+**Step 1: 識別重構機會**
+
+```typescript
+// 🔍 重構前：檢視代碼異味
+class TourService {
+  async createTour(data: CreateTourDto): Promise<Tour> {
+    // ❌ 異味1：長方法
+    // ❌ 異味2：硬編碼依賴
+    // ❌ 異味3：缺乏錯誤處理
+    if (!data.title || data.title.trim() === "") {
+      throw new Error("Tour title cannot be empty");
+    }
+
+    const tour = new Tour();
+    tour.id = generateId();
+    tour.title = data.title;
+    tour.aiContent = await this.aiService.generateContent(data.title);
+    tour.createdAt = new Date();
+
+    return tour;
+  }
+}
+```
+
+**Step 2: 應用重構手法**
+
+**🔸 依賴注入重構**
+
+```typescript
+// ✅ 重構：注入依賴，提升可測試性
+class TourService {
+  constructor(
+    private readonly tourRepository: ITourRepository,
+    private readonly aiService: IAIService,
+    private readonly cacheService: ICacheService
+  ) {}
+```
+
+**🔸 方法提取重構**
+
+```typescript
+  async createTour(data: CreateTourDto): Promise<Tour> {
+    this.validateTourData(data);
+
+    try {
+      const tour = await this.buildTour(data);
+      const enrichedTour = await this.enrichWithAIContent(tour);
+      await this.persistTour(enrichedTour);
+
+      return enrichedTour;
+    } catch (error) {
+      throw new TourCreationError(`Failed to create tour: ${error.message}`);
+    }
+  }
+
+  private validateTourData(data: CreateTourDto): void {
+    if (!data.title?.trim()) {
+      throw new TourValidationError("Tour title cannot be empty");
+    }
+  }
+
+  private async buildTour(data: CreateTourDto): Promise<Tour> {
+    return await this.tourRepository.create({
+      ...data,
+      id: generateId(),
+      createdAt: new Date(),
+    });
+  }
+
+  private async enrichWithAIContent(tour: Tour): Promise<Tour> {
+    const aiContent = await this.aiService.generateContent(tour.title);
+    tour.aiContent = aiContent;
+    return tour;
+  }
+
+  private async persistTour(tour: Tour): Promise<void> {
+    await this.cacheService.set(`tour:${tour.id}`, tour);
+  }
+}
+```
+
+**Step 3: 錯誤處理重構**
+
+```typescript
+// ✅ 自定義錯誤類型
+class TourCreationError extends Error {
+  constructor(message: string, public readonly cause?: Error) {
+    super(message);
+    this.name = "TourCreationError";
+  }
+}
+
+class TourValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TourValidationError";
+  }
+}
+```
+
+##### 📋 重構檢查清單
+
+**🔍 代碼結構檢查**
+
+- [ ] 方法長度合理（一般 <20 行）
+- [ ] 單一職責原則：每個方法只做一件事
+- [ ] 依賴反轉：依賴抽象而非具體實現
+- [ ] 消除重複代碼
+
+**📖 可讀性檢查**
+
+- [ ] 變數和方法命名清晰表意
+- [ ] 複雜邏輯有適當註釋
+- [ ] 代碼結構層次分明
+- [ ] 遵循團隊編碼規範
+
+**⚡ 性能檢查**
+
+- [ ] 移除不必要的計算
+- [ ] 合理使用緩存
+- [ ] 避免 N+1 查詢問題
+- [ ] 適當的並發處理
+
+**Step 4: 確保所有測試仍然通過**
+
+```bash
+# 🧪 重構後必須執行完整測試套件
+npm test
+# 預期結果：All tests passed
+
+# 🔍 檢查測試覆蓋率是否維持或提升
+npm run test:coverage
+```
+
+##### 🚫 重構禁忌
+
+| 禁忌行為               | 為什麼危險             | 正確做法               |
+| ---------------------- | ---------------------- | ---------------------- |
+| **同時添加新功能**     | 混淆重構和開發         | 純重構，不改變行為     |
+| **大幅度重構**         | 風險太高，難以追蹤問題 | 小步重構，頻繁測試     |
+| **忽略測試失敗**       | 可能引入 bug           | 測試失敗立即停止並修復 |
+| **重構沒有測試的代碼** | 沒有安全網             | 先補充測試再重構       |
+
+##### ✅ 重構階段檢查清單
+
+- [ ] 所有測試依然通過（100% 通過率）
+- [ ] 代碼結構更清晰易懂
+- [ ] 重複代碼已消除
+- [ ] 方法和類別職責單一
+- [ ] 依賴關係更合理
+- [ ] 性能沒有顯著下降
+- [ ] 編碼規範完全遵循
+- [ ] 適當的錯誤處理已添加
+

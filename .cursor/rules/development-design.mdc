@@ -1,0 +1,568 @@
+---
+description: 當有新的功能或架構要建立時，參考此份文件中的原則進行開發
+alwaysApply: false
+---
+
+# 在地人 AI 導覽系統 - 完整開發架構與實施指南 v3
+
+## 📋 核心設計原則
+
+### 1. Local-First Architecture (本地優先架構)
+
+- **離線可用性**：所有核心功能必須支援離線模式
+- **資料同步**：連線後自動同步，衝突自動解決
+- **漸進增強**：基礎功能離線可用，進階功能需要連線
+
+### 2. Test-Driven Development (TDD)
+
+- **紅-綠-重構循環**：先寫失敗測試，再實作，最後優化
+- **測試覆蓋率目標**：單元測試 >80%，整合測試 >70%
+- **自動化測試**：每次提交觸發測試套件
+
+### 3. TypeScript First
+
+- **嚴格模式**：啟用所有 TypeScript 嚴格檢查
+- **類型覆蓋**：95% 以上程式碼必須有明確類型
+- **共享類型**：前後端共用類型定義
+
+### 4. MVC Architecture Pattern
+
+```typescript
+// Model - 資料層
+export class TourModel {
+  private data: ITourData;
+  private repository: ITourRepository;
+
+  async findById(id: string): Promise<Tour> {
+    // 資料存取邏輯
+  }
+}
+
+// View - 視圖層
+export const TourView: React.FC<ITourViewProps> = ({ tour }) => {
+  return <View>{/* UI 渲染邏輯 */}</View>;
+};
+
+// Controller - 控制層
+export class TourController {
+  constructor(private model: TourModel, private view: TourView) {}
+
+  async handleUserAction(action: UserAction): Promise<void> {
+    // 業務邏輯處理
+  }
+}
+```
+
+## 🏗️ 技術架構
+
+### 1. 環境管理策略
+
+```yaml
+# 環境配置層級
+environments:
+  development:
+    config: .env.development
+    database: mongodb://localhost/localite_dev
+    features: all_enabled
+    logging: verbose
+
+  staging:
+    config: .env.staging
+    database: mongodb://staging/localite_staging
+    features: selected_features
+    logging: info
+
+  production:
+    config: .env.production
+    database: mongodb://prod/localite
+    features: feature_flags_controlled
+    logging: error
+```
+
+### 2. WebSocket 即時通訊架構
+
+```typescript
+// WebSocket 服務架構
+interface IChatService {
+  // 連接管理
+  connect(userId: string): Promise<void>;
+  disconnect(): void;
+
+  // 訊息處理
+  sendMessage(message: IMessage): Promise<void>;
+  onMessage(callback: MessageCallback): void;
+
+  // 歷史記錄
+  loadHistory(tourId: string): Promise<IMessage[]>;
+
+  // 狀態管理
+  getConnectionState(): ConnectionState;
+  reconnect(): Promise<void>;
+}
+
+// 實作範例
+class WebSocketChatService implements IChatService {
+  private socket: Socket;
+  private messageQueue: IMessage[] = [];
+  private isConnected: boolean = false;
+
+  async connect(userId: string): Promise<void> {
+    this.socket = io(WS_ENDPOINT, {
+      auth: { userId },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    this.setupEventHandlers();
+  }
+
+  private setupEventHandlers(): void {
+    this.socket.on("connect", this.handleConnect);
+    this.socket.on("disconnect", this.handleDisconnect);
+    this.socket.on("message", this.handleMessage);
+    this.socket.on("history", this.handleHistory);
+  }
+
+  async sendMessage(message: IMessage): Promise<void> {
+    if (this.isConnected) {
+      this.socket.emit("message", message);
+    } else {
+      // 離線時加入佇列
+      this.messageQueue.push(message);
+    }
+  }
+}
+```
+
+### 3. 本地優先資料管理
+
+```typescript
+// 本地資料庫架構
+interface ILocalDatabase {
+  // 基礎操作
+  save<T>(collection: string, data: T): Promise<void>;
+  find<T>(collection: string, query: Query): Promise<T[]>;
+  update<T>(collection: string, id: string, data: Partial<T>): Promise<void>;
+  delete(collection: string, id: string): Promise<void>;
+
+  // 同步機制
+  sync(): Promise<SyncResult>;
+  getUnsyncedChanges(): Promise<Change[]>;
+  resolveConflict(conflict: Conflict): Promise<void>;
+}
+
+// 離線優先服務
+class OfflineFirstService {
+  constructor(
+    private localDB: ILocalDatabase,
+    private remoteAPI: IRemoteAPI,
+    private syncStrategy: ISyncStrategy
+  ) {}
+
+  async getData(id: string): Promise<Data> {
+    // 1. 先從本地獲取
+    const localData = await this.localDB.find("tours", { id });
+
+    // 2. 如果在線，嘗試更新
+    if (this.isOnline()) {
+      try {
+        const remoteData = await this.remoteAPI.fetch(id);
+        await this.localDB.update("tours", id, remoteData);
+        return remoteData;
+      } catch (error) {
+        // 失敗時返回本地資料
+        return localData;
+      }
+    }
+
+    return localData;
+  }
+
+  private isOnline(): boolean {
+    return navigator.onLine;
+  }
+}
+```
+
+### 4. 功能旗標與金絲雀部署
+
+```typescript
+// 功能旗標服務
+interface IFeatureFlagService {
+  isEnabled(feature: string, userId?: string): boolean;
+  getVariant(feature: string, userId: string): string;
+  updateFlags(): Promise<void>;
+}
+
+class FeatureFlagService implements IFeatureFlagService {
+  private flags: Map<string, FeatureFlag> = new Map();
+
+  isEnabled(feature: string, userId?: string): boolean {
+    const flag = this.flags.get(feature);
+    if (!flag) return false;
+
+    // 金絲雀部署邏輯
+    if (flag.rolloutPercentage < 100) {
+      return this.isUserInRollout(userId, flag.rolloutPercentage);
+    }
+
+    return flag.enabled;
+  }
+
+  private isUserInRollout(userId: string, percentage: number): boolean {
+    // 使用 hash 確保同一用戶總是得到相同結果
+    const hash = this.hashUserId(userId);
+    return hash % 100 < percentage;
+  }
+}
+
+// 使用範例
+const ChatComponent: React.FC = () => {
+  const flags = useFeatureFlags();
+
+  if (flags.isEnabled("new_chat_ui")) {
+    return <NewChatUI />;
+  }
+
+  return <LegacyChatUI />;
+};
+```
+
+### 5. Log 監控系統
+
+```typescript
+// 統一 Log 介面
+interface ILogger {
+  debug(message: string, meta?: any): void;
+  info(message: string, meta?: any): void;
+  warn(message: string, meta?: any): void;
+  error(message: string, error?: Error, meta?: any): void;
+
+  // 效能追蹤
+  startTimer(label: string): void;
+  endTimer(label: string): void;
+
+  // 使用者行為追蹤
+  trackEvent(event: string, properties?: any): void;
+}
+
+// Log 聚合服務
+class LogAggregator {
+  private logs: LogEntry[] = [];
+  private batchSize = 100;
+  private flushInterval = 5000;
+
+  constructor(private transport: ILogTransport) {
+    this.startBatchProcessor();
+  }
+
+  log(entry: LogEntry): void {
+    this.logs.push({
+      ...entry,
+      timestamp: Date.now(),
+      sessionId: this.getSessionId(),
+      deviceInfo: this.getDeviceInfo(),
+    });
+
+    if (this.logs.length >= this.batchSize) {
+      this.flush();
+    }
+  }
+
+  private async flush(): Promise<void> {
+    if (this.logs.length === 0) return;
+
+    const batch = this.logs.splice(0, this.batchSize);
+
+    try {
+      await this.transport.send(batch);
+    } catch (error) {
+      // 失敗時存到本地
+      await this.saveToLocal(batch);
+    }
+  }
+}
+```
+
+## 🚀 Mobile App 建置流程
+
+### 1. React Native + TypeScript 設置
+
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs",
+    "lib": ["es2017"],
+    "jsx": "react-native",
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  }
+}
+```
+
+### 2. Android 建置配置
+
+```gradle
+// android/app/build.gradle
+android {
+    compileSdkVersion 33
+
+    defaultConfig {
+        applicationId "com.localite.app"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(RELEASE_STORE_FILE)
+            storePassword RELEASE_STORE_PASSWORD
+            keyAlias RELEASE_KEY_ALIAS
+            keyPassword RELEASE_KEY_PASSWORD
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt')
+        }
+    }
+}
+```
+
+### 3. iOS 建置配置
+
+```ruby
+# ios/Podfile
+platform :ios, '12.0'
+
+target 'LocaliteApp' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => true
+  )
+
+  # 自定義 Pods
+  pod 'Firebase/Analytics'
+  pod 'Firebase/Crashlytics'
+
+  post_install do |installer|
+    react_native_post_install(installer)
+  end
+end
+```
+
+### 4. CI/CD Pipeline
+
+```yaml
+# .github/workflows/mobile-deploy.yml
+name: Mobile App Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test -- --coverage
+      - name: TypeScript check
+        run: npm run type-check
+
+  build-android:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: "11"
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+      - name: Upload to Play Store
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          fastlane android deploy
+
+  build-ios:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "14.0"
+      - name: Build IPA
+        run: |
+          cd ios
+          fastlane ios build
+      - name: Upload to App Store
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          fastlane ios deploy
+```
+
+## 📊 成功指標與監控
+
+### 技術指標
+
+- **TypeScript 覆蓋率**：>95%
+- **測試覆蓋率**：>80%
+- **建置成功率**：>95%
+- **部署頻率**：每週 2-3 次
+- **平均修復時間**：<4 小時
+
+### 效能指標
+
+- **App 啟動時間**：<2 秒
+- **API 響應時間**：<200ms (P95)
+- **WebSocket 延遲**：<100ms
+- **離線轉在線同步**：<5 秒
+- **記憶體使用**：<150MB
+
+### 使用者體驗指標
+
+- **App Store 評分**：>4.5
+- **崩潰率**：<0.1%
+- **離線可用性**：>90%
+- **功能採用率**：>40%
+- **使用者留存率**：>60% (30 天)
+
+## 🗓️ 實施時程表
+
+### Phase 1: 基礎建設 (Week 1-2)
+
+- 環境設置與 TypeScript 配置
+- TDD 框架建立
+- MVC 架構實作
+- 本地資料庫設計
+
+### Phase 2: 核心功能 (Week 3-6)
+
+- WebSocket 聊天系統
+- 離線優先資料管理
+- AI 導覽整合
+- 使用者認證系統
+
+### Phase 3: 平台整合 (Week 7-8)
+
+- Android 建置流程
+- iOS 建置流程
+- CI/CD Pipeline
+- 自動化測試
+
+### Phase 4: 部署與監控 (Week 9-10)
+
+- 功能旗標系統
+- 金絲雀部署
+- Log 監控系統
+- 效能優化
+
+### Phase 5: 上線與迭代 (Week 11-12)
+
+- Beta 測試
+- 漸進式發布
+- 監控與調整
+- 文檔完善
+
+## 🔒 安全性考量
+
+### 1. 資料加密
+
+- **本地資料庫加密**：使用 SQLCipher 或同等加密方案
+- **傳輸層加密**：強制使用 TLS 1.3
+- **敏感資料遮罩**：日誌中自動隱藏敏感資訊
+
+### 2. 認證與授權
+
+- **JWT Token 管理**：短期存取 Token + 長期更新 Token
+- **Refresh Token 機制**：安全的 Token 更新流程
+- **角色權限控制**：基於角色的存取控制 (RBAC)
+
+### 3. 輸入驗證
+
+- **SQL Injection 防護**：參數化查詢
+- **XSS 防護**：內容清理與編碼
+- **CSRF 防護**：Token 驗證機制
+
+### 4. 隱私保護
+
+- **GDPR 合規**：使用者資料控制權
+- **資料最小化原則**：只收集必要資料
+- **使用者資料刪除權**：完整的資料刪除流程
+
+## 📚 文檔與知識管理
+
+### 1. 技術文檔
+
+- **API 文檔**：使用 OpenAPI/Swagger 自動生成
+- **架構決策記錄**：ADR 格式記錄重要決策
+- **部署手冊**：詳細的部署步驟與回滾程序
+
+### 2. 開發指南
+
+- **程式碼風格指南**：統一的編碼標準
+- **Git 工作流程**：分支策略與提交規範
+- **Code Review 標準**：審查清單與最佳實踐
+
+### 3. 使用者文檔
+
+- **使用手冊**：功能說明與操作指南
+- **FAQ**：常見問題與解答
+- **故障排除指南**：問題診斷與解決方案
+
+## 🎯 關鍵成功因素
+
+### 技術層面
+
+1. **穩定的離線功能**：確保核心功能離線可用
+2. **流暢的同步機制**：無感知的資料同步體驗
+3. **高效能架構**：快速響應與低資源消耗
+
+### 團隊協作
+
+1. **敏捷開發流程**：快速迭代與持續改進
+2. **知識共享文化**：定期技術分享與文檔化
+3. **自動化優先**：減少手動操作，提高效率
+
+### 產品策略
+
+1. **使用者導向設計**：深入了解使用者需求
+2. **漸進式發布**：控制風險，收集回饋
+3. **數據驅動決策**：基於指標優化產品
+
+---
+
+> 💡 **注意事項**：本文檔為活文檔，將隨專案發展持續更新。所有團隊成員都應熟悉並遵循這些指導原則。

@@ -1,0 +1,422 @@
+---
+alwaysApply: false
+---
+# 統一開發流程指南 - TDD + Agent Prompts 整合版
+
+Version: 2.0.0
+Last Updated: 2025-08-22
+
+## 📋 核心原則
+
+### 1. Test-Driven Development (TDD)
+- **紅-綠-重構循環**：先寫失敗測試 → 實作最小程式碼 → 重構優化
+- **測試覆蓋率目標**：單元測試 >80%，整合測試 >70%
+- **避免過度設計**：只寫通過測試所需的最少程式碼
+
+### 2. Agent-Driven Development
+- 根據不同組件自動套用對應的 System Agent Prompt
+- 確保程式碼風格和架構一致性
+- 提供智能化開發建議
+
+### 3. 環境管理原則
+- 嚴格區分開發、測試、預生產、生產環境
+- 使用功能旗標控制功能發布
+- 環境變數集中管理
+
+## 🚀 任務執行主流程
+
+### Phase 1: 任務準備與分析
+
+#### 1.1 讀取任務清單
+```bash
+# 查看任務清單
+cat tasks-localite-prd.mdc | grep -E "^\s*- \[ \]"
+
+# 選擇任務（自動或手動）
+# 自動：選擇最高優先級未完成任務
+# 手動：指定任務編號（如 2.5.1）
+```
+
+#### 1.2 選擇對應的 Agent Prompt
+根據任務類型，系統自動載入對應的 Agent Prompt：
+
+| 任務類型 | Agent Prompt | 適用範圍 |
+|---------|--------------|---------|
+| Frontend (1.5, 2.5, 3.4) | Frontend Development Agent | React Native, UI 元件 |
+| Backend (1.2, 2.2, 3.1) | Backend Development Agent | Node.js, API, Services |
+| Database (1.3, 2.1, 4.1) | Database Design Agent | MongoDB, Redis, Schema |
+| DevOps (6.1, 6.2, 8.0) | DevOps Engineer Agent | CI/CD, 部署, 監控 |
+| Testing (所有任務) | Testing Specialist Agent | 測試策略, TDD 指導 |
+
+#### 1.3 環境變數檢查與配置
+
+##### 環境檔案對應表
+
+| 環境 | 配置檔案 | 用途 | 使用時機 |
+|-----|---------|------|---------|
+| 開發 | `.env.development` | 本地開發 | 日常開發、功能實作 |
+| 測試 | `.env.test` | 自動化測試 | 執行測試套件 |
+| 預生產 | `.env.staging` | 預發布測試 | 功能驗證、UAT |
+| 生產 | `.env.production` | 正式環境 | 線上服務 |
+
+##### 環境變數驗證腳本
+```bash
+# 執行環境檢查
+npm run env:check
+
+# 切換環境
+export NODE_ENV=development  # 或 test, staging, production
+npm run env:load
+```
+
+### Phase 2: TDD 開發循環
+
+#### 2.1 🔴 紅色階段：撰寫失敗測試
+
+**Agent Prompt 啟動**：Testing Specialist Agent
+```typescript
+// 範例：為新功能撰寫測試
+describe('TourService', () => {
+  it('should create a new tour with AI content', async () => {
+    const result = await tourService.createTour({ 
+      title: 'Test Tour' 
+    });
+    expect(result).toHaveProperty('id');
+    expect(result.aiContent).toBeDefined();
+  });
+});
+```
+
+**執行測試確認失敗**：
+```bash
+npm test -- --testNamePattern="should create a new tour"
+# 預期結果：❌ Test Failed
+```
+
+#### 2.2 🟢 綠色階段：實作最小程式碼
+
+**Agent Prompt 切換**：根據實作內容選擇
+- Frontend: Frontend Development Agent
+- Backend: Backend Development Agent
+- Database: Database Design Agent
+
+```typescript
+// 最小實作範例
+class TourService {
+  async createTour(data: CreateTourDto): Promise<Tour> {
+    const tour = new Tour();
+    tour.id = generateId();
+    tour.title = data.title;
+    tour.aiContent = await this.aiService.generateContent(data.title);
+    return tour;
+  }
+}
+```
+
+**執行測試確認通過**：
+```bash
+npm test -- --testNamePattern="should create a new tour"
+# 預期結果：✅ Test Passed
+```
+
+#### 2.3 🔵 重構階段：優化程式碼
+
+**Agent Prompt 協助**：對應領域的 Agent + Testing Specialist
+```typescript
+// 重構後的程式碼
+class TourService {
+  constructor(
+    private readonly tourRepository: ITourRepository,
+    private readonly aiService: IAIService,
+    private readonly cacheService: ICacheService
+  ) {}
+
+  async createTour(data: CreateTourDto): Promise<Tour> {
+    // 改善：依賴注入、錯誤處理、快取
+    try {
+      const tour = await this.tourRepository.create({
+        ...data,
+        id: generateId(),
+        createdAt: new Date()
+      });
+      
+      const aiContent = await this.generateAIContent(tour);
+      tour.aiContent = aiContent;
+      
+      await this.cacheService.set(`tour:${tour.id}`, tour);
+      return tour;
+    } catch (error) {
+      throw new TourCreationError(error.message);
+    }
+  }
+  
+  private async generateAIContent(tour: Tour): Promise<string> {
+    // 抽取的私有方法
+    return this.aiService.generateContent(tour.title);
+  }
+}
+```
+
+**確保所有測試仍然通過**：
+```bash
+npm test
+# 預期結果：All tests passed
+```
+
+### Phase 3: 整合與驗證
+
+#### 3.1 執行完整測試套件
+
+```bash
+# 單元測試
+npm run test:unit
+
+# 整合測試（需要真實環境變數）
+NODE_ENV=test npm run test:integration
+
+# E2E 測試
+npm run test:e2e
+
+# 測試覆蓋率
+npm run test:coverage
+```
+
+#### 3.2 環境驗證流程
+
+##### Mock 測試 vs 整合測試決策矩陣
+
+| 測試類型 | 使用 Mock | 使用真實服務 | 環境需求 |
+|---------|----------|------------|---------|
+| 業務邏輯 | ✅ | ❌ | 無 |
+| 工具函數 | ✅ | ❌ | 無 |
+| 外部 API | ❌ | ✅ | `.env.test` |
+| 資料庫操作 | 部分 | ✅ | 測試資料庫 |
+| 認證流程 | ❌ | ✅ | Firebase 測試專案 |
+
+### Phase 4: 提交與部署
+
+#### 4.1 程式碼檢查
+
+```bash
+# TypeScript 類型檢查
+npm run type-check
+
+# ESLint 檢查（只修復當前任務相關）
+npm run lint -- --fix src/current-feature/
+
+# Prettier 格式化
+npm run format
+```
+
+#### 4.2 Git 提交流程
+
+```bash
+# 暫存變更
+git add .
+
+# 提交（遵循 Conventional Commits）
+git commit -m "feat(tour): implement AI tour creation with TDD" \
+           -m "- Added TourService with AI content generation" \
+           -m "- Implemented caching strategy" \
+           -m "- Test coverage: 85%" \
+           -m "Task: 3.2.1 from tasks-localite-prd.mdc"
+```
+
+#### 4.3 功能旗標配置
+
+```typescript
+// 新功能必須包裹在功能旗標中
+if (featureFlags.isEnabled('ai-tour-creation', userId)) {
+  // 新功能程式碼
+  return await tourService.createTourWithAI(data);
+} else {
+  // 舊版本邏輯
+  return await tourService.createTour(data);
+}
+```
+
+## 🤖 System Agent Prompts 使用指南
+
+### Frontend Development Agent
+**觸發條件**：處理 React Native、UI 元件、前端狀態管理
+```markdown
+Context: React Native + TypeScript 開發
+Principles:
+- 使用函數式元件和 Hooks
+- 實作本地優先策略
+- 確保離線可用性
+- 遵循 MVC 模式（View 層）
+```
+
+### Backend Development Agent
+**觸發條件**：處理 Node.js、API、後端服務
+```markdown
+Context: Node.js + Express + TypeScript
+Principles:
+- RESTful API 設計
+- WebSocket 實時通訊
+- 依賴注入模式
+- 錯誤處理完整性
+```
+
+### Database Design Agent
+**觸發條件**：處理資料庫設計、Schema、查詢優化
+```markdown
+Context: MongoDB + Redis + 本地資料庫
+Principles:
+- 正規化 vs 反正規化權衡
+- 離線同步機制
+- 索引優化策略
+- 資料衝突解決
+```
+
+### DevOps Engineer Agent
+**觸發條件**：處理 CI/CD、部署、監控
+```markdown
+Context: Docker + Kubernetes + GitHub Actions
+Principles:
+- 金絲雀部署策略
+- 功能旗標管理
+- 零停機部署
+- 自動回滾機制
+```
+
+### Testing Specialist Agent
+**觸發條件**：所有測試相關任務
+```markdown
+Context: Jest + TDD 方法論
+Principles:
+- 紅-綠-重構循環
+- 測試優先開發
+- 覆蓋率 >80%
+- Mock vs 整合測試決策
+```
+
+## 📁 終端機指令速查表
+
+### 開發常用指令
+```bash
+# 環境管理
+npm run env:check          # 檢查環境變數
+npm run env:load           # 載入當前環境變數
+
+# 開發伺服器
+npm run dev                # 啟動開發伺服器
+npm run dev:mobile         # 啟動 React Native Metro
+
+# 測試指令
+npm test                   # 執行所有測試
+npm run test:unit         # 只執行單元測試
+npm run test:integration  # 只執行整合測試
+npm run test:watch        # 監聽模式
+npm run test:coverage     # 測試覆蓋率
+
+# 程式碼品質
+npm run lint              # ESLint 檢查
+npm run lint:fix          # 自動修復
+npm run format            # Prettier 格式化
+npm run type-check        # TypeScript 檢查
+
+# 建置與部署
+npm run build             # 生產環境建置
+npm run build:android     # Android APK
+npm run build:ios         # iOS IPA
+npm run deploy:canary     # 金絲雀部署
+npm run deploy:prod       # 生產環境部署
+```
+
+### Git 工作流程
+```bash
+# 功能開發
+git checkout -b feature/task-x-x-x
+git add .
+git commit -m "feat: [description]"
+git push origin feature/task-x-x-x
+
+# 程式碼審查
+git fetch origin
+git checkout -b review/pr-xxx origin/pr-xxx
+npm test
+npm run lint
+
+# 合併主幹
+git checkout main
+git pull origin main
+git merge --no-ff feature/task-x-x-x
+git push origin main
+```
+
+## 📊 任務完成檢查清單
+
+- [ ] **TDD 循環完成**
+  - [ ] 所有測試案例撰寫完成
+  - [ ] 程式碼通過所有測試
+  - [ ] 完成必要的重構
+  
+- [ ] **程式碼品質**
+  - [ ] TypeScript 無類型錯誤
+  - [ ] ESLint 無相關錯誤
+  - [ ] 測試覆蓋率達標（>80%）
+  
+- [ ] **環境驗證**
+  - [ ] 開發環境測試通過
+  - [ ] 測試環境驗證完成
+  - [ ] 功能旗標配置正確
+  
+- [ ] **文檔更新**
+  - [ ] 任務狀態標記完成 [x]
+  - [ ] API 文檔更新
+  - [ ] 錯誤記錄更新（如需要）
+  
+- [ ] **提交準備**
+  - [ ] Git commit 遵循規範
+  - [ ] PR 描述清晰完整
+  - [ ] CI/CD 檢查通過
+
+## 🔄 錯誤記錄格式
+
+```markdown
+## 錯誤修正記錄 (YYYY-MM-DD) - 任務 X.X [Task Name]
+
+### 使用的 Agent Prompt
+- Primary: [Agent Name]
+- Secondary: [Agent Name]
+
+### TDD 週期總結
+- 測試案例數量：X
+- 重構次數：Y
+- 最終覆蓋率：Z%
+
+### 環境配置
+- 使用環境：[development/test/staging]
+- 特殊配置：[列出]
+
+### 關鍵決策
+- Mock vs 整合測試選擇
+- 架構模式選擇
+- 效能優化策略
+
+### 問題與解決
+1. **問題描述**
+   - 錯誤訊息
+   - 發生環境
+2. **解決方案**
+   - 具體步驟
+   - 程式碼範例
+
+### 學習要點
+- 最佳實踐
+- 注意事項
+- 後續建議
+```
+
+## ⚠️ 重要提醒
+
+1. **TDD 紀律**：嚴格遵守先測試後實作原則
+2. **Agent 切換**：根據任務內容自動切換對應 Agent
+3. **環境隔離**：絕不混用不同環境的配置
+4. **功能旗標**：所有新功能必須可控制開關
+5. **提交規範**：遵循 Conventional Commits 格式
+6. **測試優先級**：優先整合測試，其次 Mock 測試
+7. **錯誤處理**：只修復當前任務相關的錯誤# 統一開發流程指南 - TDD + Agent Prompts 整合版
+

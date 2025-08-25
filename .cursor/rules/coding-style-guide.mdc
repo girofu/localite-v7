@@ -1,0 +1,441 @@
+# Localite-V6 編碼風格規範指南
+
+version: 1.0.0
+createDate: 2025-08-23
+
+## 功能描述
+
+統一專案編碼標準，遵循 Google 開發者風格指南，使用自動化工具確保程式碼品質一致性，支援任務導向的錯誤修復策略。
+
+## 統一編碼標準
+
+### 基本原則
+
+- **一致性**: 所有程式碼遵循相同格式和風格
+- **可讀性**: 程式碼清晰易懂，變數和函數命名具有描述性
+- **可維護性**: 結構化程式碼，易於修改和擴展
+- **自動化**: 使用工具自動檢查和格式化程式碼
+
+## ESLint 配置標準
+
+### 根目錄配置
+
+```javascript
+// .eslintrc.js (根目錄)
+module.exports = {
+  root: true,
+  env: {
+    node: true,
+    es2021: true,
+  },
+  extends: ["eslint:recommended", "airbnb-base"],
+  parserOptions: {
+    ecmaVersion: 12,
+    sourceType: "module",
+  },
+  rules: {
+    // 字串風格
+    quotes: ["error", "single"],
+
+    // 結尾逗號
+    "comma-dangle": ["error", "always-multiline"],
+
+    // 函數返回值一致性
+    "consistent-return": "error",
+
+    // 類別方法使用 this
+    "class-methods-use-this": "warn",
+
+    // 變數命名
+    camelcase: ["error", { properties: "never", ignoreDestructuring: false }],
+
+    // 程式碼複雜度
+    complexity: ["warn", { max: 10 }],
+
+    // 函數長度限制
+    "max-lines-per-function": [
+      "warn",
+      { max: 50, skipBlankLines: true, skipComments: true },
+    ],
+  },
+  overrides: [
+    {
+      files: ["frontend/**/*.{js,jsx}"],
+      extends: ["eslint:recommended", "plugin:react/recommended"],
+      env: {
+        browser: true,
+        es2021: true,
+      },
+      rules: {
+        "react/prop-types": "off",
+        "react/react-in-jsx-scope": "off", // React 17+
+        "react/jsx-uses-react": "off",
+      },
+    },
+    {
+      files: ["mobile/**/*.{js,jsx}"],
+      extends: ["eslint:recommended", "plugin:react-native/recommended"],
+      env: {
+        "react-native/react-native": true,
+      },
+      rules: {
+        "react-native/no-unused-styles": "error",
+        "react-native/split-platform-components": "warn",
+      },
+    },
+    {
+      files: ["backend/**/*.js"],
+      rules: {
+        "no-console": "off", // 後端允許使用 console
+        "import/no-extraneous-dependencies": [
+          "error",
+          { devDependencies: true },
+        ],
+      },
+    },
+    {
+      files: ["**/*.test.js", "**/*.spec.js", "__tests__/**/*.js"],
+      env: {
+        jest: true,
+      },
+      rules: {
+        "no-unused-expressions": "off",
+        "max-lines-per-function": "off", // 測試檔案允許較長函數
+      },
+    },
+  ],
+};
+```
+
+### TypeScript 專案額外配置
+
+```javascript
+// .eslintrc.js (TypeScript 專案)
+module.exports = {
+  parser: "@typescript-eslint/parser",
+  extends: [
+    "eslint:recommended",
+    "@typescript-eslint/recommended",
+    "airbnb-typescript",
+  ],
+  rules: {
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+  },
+};
+```
+
+## Prettier 配置
+
+### 基礎配置
+
+```json
+// .prettierrc
+{
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "tabWidth": 2,
+  "semi": true,
+  "printWidth": 100,
+  "bracketSpacing": true,
+  "arrowParens": "avoid",
+  "endOfLine": "lf",
+  "useTabs": false
+}
+```
+
+### 專案特定忽略設定
+
+```bash
+# .prettierignore
+node_modules/
+dist/
+build/
+coverage/
+*.min.js
+*.min.css
+package-lock.json
+yarn.lock
+```
+
+## ESLint 錯誤處理策略
+
+### 修復優先級策略
+
+基於專案經驗，採用任務導向的 ESLint 修復策略：
+
+#### 1. 🔴 高優先級（立即修復）
+
+- **任務相關錯誤**: 立即修復與當前任務直接相關的 ESLint 錯誤
+- **阻擋性錯誤**: 導致程式無法正常執行的錯誤
+- **安全性問題**: 可能造成安全漏洞的程式碼
+
+#### 2. 🟡 中優先級（任務完成後處理）
+
+- **程式碼品質警告**: 不影響功能但影響可讀性的警告
+- **效能相關建議**: 可能影響效能的程式碼結構
+
+#### 3. 🟢 低優先級（批量處理）
+
+- **非相關錯誤**: 記錄在任務筆記中，留待後續任務處理
+- **風格不一致**: 不影響功能的純格式問題
+
+### ESLint 錯誤修復指南
+
+```bash
+# 1. 檢查當前錯誤
+npm run lint
+
+# 2. 自動修復能修復的問題
+npm run lint:fix
+
+# 3. 查看剩餘需要手動修復的問題
+npm run lint -- --fix-dry-run
+
+# 4. 針對特定檔案修復
+npm run lint -- --fix src/specific-file.js
+
+# 5. 針對特定類型錯誤修復
+npm run lint -- --fix --rule "quotes,comma-dangle"
+
+# 6. 如果錯誤過多影響開發流程，可以暫時跳過 pre-commit
+git commit --no-verify -m "feat: implement feature (ESLint fixes pending)"
+
+# 7. 批量修復特定目錄
+npm run lint -- --fix frontend/
+npm run lint -- --fix backend/
+```
+
+### 錯誤處理決策樹
+
+```
+ESLint 錯誤 → 是否與當前任務相關？
+              ├─ 是 → 立即修復
+              └─ 否 → 是否阻擋程式執行？
+                      ├─ 是 → 立即修復
+                      └─ 否 → 記錄到任務筆記，稍後處理
+```
+
+## 程式碼品質指標
+
+### 必須達成指標
+
+- **ESLint 錯誤**: 0 個 error（必須）
+- **TypeScript 錯誤**: 0 個編譯錯誤（TypeScript 專案）
+- **Prettier 格式**: 自動格式化，無格式不一致
+
+### 建議達成指標
+
+- **ESLint 警告**: 盡量減少，不超過 10 個 warning
+- **測試覆蓋率**: 80% 以上（TDD 流程下應更容易達成）
+- **程式碼複雜度**: 每個函數不超過 10 個循環複雜度
+- **函數長度**: 每個函數不超過 50 行（不含註釋和空行）
+
+### 程式碼註釋標準
+
+- **所有 public API** 必須有 JSDoc 註釋
+- **複雜邏輯** 需要解釋性註釋
+- **TODO 註釋** 必須包含負責人和時間
+
+```javascript
+/**
+ * 計算用戶推薦分數
+ * @param {string} userId - 用戶ID
+ * @param {Object} preferences - 用戶偏好設定
+ * @param {number} preferences.categoryWeight - 類別權重
+ * @returns {Promise<number>} 推薦分數 (0-100)
+ * @throws {Error} 當用戶不存在時拋出錯誤
+ */
+async function calculateRecommendationScore(userId, preferences) {
+  // TODO: 優化計算演算法 - @fuchangwei 2025-01-30
+  // 複雜的推薦演算法實作...
+}
+```
+
+## 命名規範
+
+### 變數命名
+
+```javascript
+// ✅ 良好的命名
+const userPreferences = getUserPreferences();
+const isAuthenticated = checkAuthStatus();
+const MAX_RETRY_COUNT = 3;
+
+// ❌ 不良的命名
+const data = getData();
+const flag = checkStatus();
+const num = 3;
+```
+
+### 函數命名
+
+```javascript
+// ✅ 動詞開頭，描述功能
+function calculateTotalPrice() {}
+function validateEmailFormat() {}
+function getUserByEmail() {}
+
+// ❌ 不清楚的函數名
+function process() {}
+function check() {}
+function handle() {}
+```
+
+### 檔案命名規範
+
+```
+frontend/
+├── components/
+│   ├── UserProfile.jsx          // 元件：PascalCase
+│   ├── user-settings.module.css // CSS 模組：kebab-case
+│   └── index.js                 // 索引檔案：小寫
+├── utils/
+│   ├── formatHelper.js          // 工具函數：camelCase
+│   └── constants.js             // 常數：camelCase
+└── pages/
+    ├── user-dashboard.jsx       // 頁面：kebab-case
+    └── settings.jsx
+```
+
+## Git 提交訊息規範
+
+```bash
+# 格式：<type>(<scope>): <description>
+feat(auth): implement user login functionality
+fix(api): resolve user data fetching issue
+docs(readme): update installation instructions
+refactor(ui): simplify user profile component
+test(auth): add login integration tests
+chore(deps): update eslint to v8.0.0
+
+# 詳細描述（可選）
+feat(payment): integrate Stripe payment gateway
+
+- Add payment processing service
+- Implement webhook handling
+- Add payment status tracking
+- Update user dashboard with payment history
+
+Closes #123
+```
+
+## 預設 npm 腳本
+
+```json
+{
+  "scripts": {
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "quality": "npm run lint && npm run format:check",
+    "quality:fix": "npm run lint:fix && npm run format",
+    "pre-commit": "npm run quality:fix && npm test",
+    "validate": "npm run quality && npm test && npm run build"
+  }
+}
+```
+
+## Git Hook 整合
+
+### Husky 設定
+
+```json
+// package.json
+{
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run pre-commit",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  }
+}
+```
+
+### lint-staged 設定
+
+```json
+// package.json
+{
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,css,scss}": ["prettier --write"]
+  }
+}
+```
+
+## IDE 整合設定
+
+### VSCode 設定
+
+```json
+// .vscode/settings.json
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "eslint.workingDirectories": ["frontend", "backend"],
+  "files.associations": {
+    "*.mdc": "markdown"
+  }
+}
+```
+
+### VSCode 建議擴充套件
+
+```json
+// .vscode/extensions.json
+{
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss"
+  ]
+}
+```
+
+## 特殊情況處理
+
+### 第三方程式碼忽略
+
+```javascript
+// eslint-disable-next-line
+const thirdPartyCode = require("legacy-library");
+
+/* eslint-disable */
+// 大段第三方程式碼
+/* eslint-enable */
+```
+
+### 測試檔案特殊規則
+
+```javascript
+// 測試檔案中允許的特殊寫法
+describe("User Service", () => {
+  // eslint-disable-next-line max-lines-per-function
+  it("should handle complex user creation scenario", async () => {
+    // 長測試案例...
+  });
+});
+```
+
+## 與其他規範的關聯
+
+- **依賴**: `@develop-by-task.mdc` - 開發流程規範
+- **整合**: `@terminal-commands.mdc` - 相關指令標準化
+- **參考**: Google 開發者風格指南
+- **工具**: ESLint, Prettier, Husky, lint-staged
+- **支援**: VSCode, WebStorm 等 IDE 整合
+
+## 版本記錄
+
+- v1.0.0 (2025-01-25): 從 develop-by-task 規範中獨立出編碼風格部分
+  - 新增 TypeScript 專案配置
+  - 新增 Git 提交訊息規範
+  - 新增 IDE 整合設定
+  - 新增特殊情況處理指南

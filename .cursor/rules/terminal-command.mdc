@@ -1,0 +1,79 @@
+---
+description: 專案會使用到的常用 command 皆須依此文件中的方式執行
+alwaysApply: false
+---
+## 📋 終端機指令規範 (新增)
+
+### 標準化指令集
+
+所有終端機操作必須遵循以下標準指令集：
+
+#### 專案初始化
+```bash
+# 專案設置
+cd /Users/fuchangwei/Projects/localite-v6
+npm install                     # 安裝依賴
+npm run setup                   # 初始化設置
+
+# 環境設置
+cp .env.example .env           # 建立環境檔
+cp .env .env.test              # 建立測試環境
+cp .env .env.development       # 建立開發環境
+```
+
+#### TDD 開發循環指令
+```bash
+# 紅色階段 - 寫測試
+npm run test:watch -- path/to/test.spec.ts    # 監聽模式運行特定測試
+
+# 綠色階段 - 實作功能
+npm run dev                                    # 啟動開發伺服器
+npm run test:unit -- --coverage               # 檢查單元測試覆蓋率
+
+# 重構階段 - 優化程式碼
+npm run lint                                   # 檢查程式碼規範
+npm run lint:fix                              # 自動修復格式問題
+npm run type-check                            # TypeScript 類型檢查
+```
+
+#### 測試執行指令
+```bash
+# 測試類型
+npm test                       # 執行所有測試
+npm run test:unit             # 只執行單元測試
+npm run test:integration      # 只執行整合測試
+npm run test:e2e              # 執行 E2E 測試
+npm run test:coverage         # 生成覆蓋率報告
+
+# 特定測試
+npm test -- --testNamePattern="should create user"    # 執行特定測試
+npm test -- path/to/specific.test.ts                  # 執行特定檔案
+```
+
+#### 建置與部署指令
+```bash
+# 建置
+npm run build                  # 生產環境建置
+npm run build:dev             # 開發環境建置
+npm run build:android         # Android APK 建置
+npm run build:ios             # iOS IPA 建置
+
+# 部署
+npm run deploy:staging        # 部署到測試環境
+npm run deploy:canary         # 金絲雀部署 (5%)
+npm run deploy:production     # 生產環境部署
+```
+
+#### Git 操作指令
+```bash
+# 提交流程
+git add .                                      # 暫存所有變更
+git status                                     # 檢查狀態
+git diff --staged                             # 檢視暫存變更
+git commit -m "type: description" -m "details"  # 提交變更
+
+# 分支管理
+git checkout -b feature/task-x-x              # 建立功能分支
+git push origin feature/task-x-x              # 推送分支
+git checkout main                             # 切換主分支
+git merge --no-ff feature/task-x-x            # 合併功能分支
