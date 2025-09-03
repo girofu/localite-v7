@@ -55,57 +55,59 @@ AI Services:
 #### Day 1-2: Firebase 設置
 
 - [x] Firebase 專案建立
-- [ ] Authentication 設置
-- [ ] Firestore 資料庫結構設計
-- [ ] Storage 設定
+- [x] Authentication 設置
+- [x] Firestore 資料庫結構設計
+- [x] Storage 設定
 
 #### Day 3-4: AI 服務整合
 
-- [ ] Google AI Studio API 整合
-- [ ] Google TTS 服務整合
-- [ ] 基本 AI 對話邏輯
+- [x] Google AI Studio API 整合
+- [x] Google TTS 服務整合
+- [x] 基本 AI 對話邏輯
 
 #### Day 5-7: Mobile App 基礎
 
-- [ ] 登入/註冊頁面
-- [ ] 主要導覽介面
-- [ ] 照片上傳功能
+- [x] 登入/註冊頁面
+- [x] 主要導覽介面
+- [x] 照片上傳功能
 
 ### Week 2: 核心功能開發 (7 天)
 
 #### Day 8-10: AI 導覽功能
 
-- [ ] AI 對話介面完成
-- [ ] 照片分析與問答整合
-- [ ] 語音播放控制
+- [x] AI 對話介面完成
+- [x] 照片分析與問答整合
+- [x] 語音播放控制
 
 #### Day 11-14: 商戶後台
 
-- [ ] 商戶註冊流程
-- [ ] 內容上傳介面
-- [ ] 內容管理系統
+- [x] 商戶註冊流程
+- [x] 內容上傳介面
+- [x] 內容管理系統
 
 ### Week 3: 整合與測試 (7 天)
 
-#### Day 15-17: 功能整合
+#### Day 15-17: 功能整合 ✅
 
-- [ ] 前後端 API 整合
-- [ ] 多語言切換實作
-- [ ] 基本錯誤處理
+- [x] 前後端 API 整合
+- [x] 多語言切換實作
+- [x] 基本錯誤處理
+
+**📋 開發記錄**: [Day 15-17 開發記錄](dev-record-day15-17-api-integration-multilingual-error-handling.md)
 
 #### Day 18-21: 測試與優化
 
-- [ ] 功能測試
-- [ ] 性能調整
-- [ ] Bug 修復
+- [x] 功能測試
+- [x] 性能調整
+- [x] Bug 修復
 
 ### Week 4: 部署與上線 (7 天)
 
 #### Day 22-24: 部署準備
 
-- [ ] App Store / Play Store 資料準備
-- [ ] 生產環境設置
-- [ ] 最終測試
+- [x] App Store / Play Store 資料準備
+- [x] 生產環境設置
+- [x] 最終測試
 
 #### Day 25-28: 發布
 
