@@ -23,7 +23,8 @@ const MiniCard: React.FC<MiniCardProps> = ({
   containerStyle,
   iconStyle,
   textStyle,
-}) => (
+}) => {
+  return (
     <TouchableOpacity 
       style={[styles.container, containerStyle]} 
       onPress={onPress}
@@ -46,44 +47,45 @@ const MiniCard: React.FC<MiniCardProps> = ({
       </View>
     </TouchableOpacity>
   );
+};
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
     backgroundColor: '#f5f5f5',
-    borderColor: '#ddd',
     borderRadius: 12,
     borderWidth: 1,
-    elevation: 2,
-    height: 100,
-    justifyContent: 'center',
+    borderColor: '#ddd',
     padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 100,
+    height: 100,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    width: 100,
-  },
-  icon: {
-    height: 40,
-    width: 40,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   iconContainer: {
-    alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  title: {
-    color: '#333',
-    fontSize: 14,
-    fontWeight: 'bold',
-    lineHeight: 18,
-    textAlign: 'center',
+  icon: {
+    width: 40,
+    height: 40,
   },
   titleContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
 

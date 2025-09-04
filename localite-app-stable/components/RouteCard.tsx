@@ -91,50 +91,55 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    elevation: 3,
-    height: 280,
-    marginBottom: 16,
-    marginTop: 8,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    marginBottom: 16,
+    marginTop: 8,
     width: 180,
+    height: 280,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 120,
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
   contentContainer: {
-    flex: 1,
     padding: 12,
+    flex: 1,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#232323',
+    marginBottom: 6,
+    lineHeight: 20,
   },
   description: {
-    color: '#666',
     fontSize: 12,
+    color: '#666',
     lineHeight: 16,
     marginBottom: 8,
   },
-  image: {
-    height: '100%',
-    width: '100%',
-  },
-  imageContainer: {
-    height: 120,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  title: {
-    color: '#232323',
-    fontSize: 16,
-    fontWeight: 'bold',
-    lineHeight: 20,
-    marginBottom: 6,
-  },
-  worksheetLabel: {
-    color: '#999',
-    fontSize: 10,
-    marginBottom: 4,
-  },
   worksheetSection: {
     marginTop: 6,
+  },
+  worksheetLabel: {
+    fontSize: 10,
+    color: '#999',
+    marginBottom: 4,
+  },
+  worksheetTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
   },
   worksheetTag: {
     backgroundColor: '#232323',
@@ -146,11 +151,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 9,
     fontWeight: '500',
-  },
-  worksheetTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
   },
 });
 

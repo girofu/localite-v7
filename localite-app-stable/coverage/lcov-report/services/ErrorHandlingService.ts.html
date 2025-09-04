@@ -30,16 +30,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">74.25% </span>
+                <span class="strong">72.13% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>75/101</span>
+                <span class='fraction'>44/61</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>17/17</span>
             </div>
         
             
@@ -945,19 +945,19 @@ export class ErrorHandlingService {
     retryable: boolean;
   } {
     // 根據錯誤名稱分類
-    if (error.name === 'NetworkError' || error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('network')) {
+    if (error.name === 'NetworkError' || error.message?.includes('network')) {
       return { code: 'network_error', statusCode: 503, retryable: true };
     }
 &nbsp;
-    if (error.name === 'TimeoutError' || error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('timeout')) {
+    if (error.name === 'TimeoutError' || error.message?.includes('timeout')) {
       return { code: 'network_timeout', statusCode: 408, retryable: true };
     }
 &nbsp;
-    if (error.name === 'AuthenticationError' || error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('auth')) {
+    if (error.name === 'AuthenticationError' || error.message?.includes('auth')) {
       return { code: 'authentication_failed', statusCode: 401, retryable: false };
     }
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'AuthorizationError' || error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('permission')) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'AuthorizationError' || error.message?.includes('permission')) {
 <span class="cstat-no" title="statement not covered" >      return { code: 'authorization_failed', statusCode: 403, retryable: false };</span>
     }
 &nbsp;
@@ -965,23 +965,23 @@ export class ErrorHandlingService {
       return { code: 'validation_error', statusCode: 400, retryable: false };
     }
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'FirestoreError' || error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('database')) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'FirestoreError' || error.message?.includes('database')) {
 <span class="cstat-no" title="statement not covered" >      return { code: 'database_error', statusCode: 503, retryable: true };</span>
     }
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'AIServiceError' || error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('AI')) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'AIServiceError' || error.message?.includes('AI')) {
 <span class="cstat-no" title="statement not covered" >      return { code: 'ai_service_error', statusCode: 503, retryable: true };</span>
     }
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'TTSServiceError' || error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('TTS')) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.name === 'TTSServiceError' || error.message?.includes('TTS')) {
 <span class="cstat-no" title="statement not covered" >      return { code: 'tts_service_error', statusCode: 503, retryable: true };</span>
     }
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('rate limit')) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.message?.includes('rate limit')) {
 <span class="cstat-no" title="statement not covered" >      return { code: 'rate_limit_exceeded', statusCode: 429, retryable: true };</span>
     }
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.message<span class="branch-0 cbranch-no" title="branch not covered" >?.i</span>ncludes('not found')) {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (error.message?.includes('not found')) {
 <span class="cstat-no" title="statement not covered" >      return { code: 'not_found', statusCode: 404, retryable: false };</span>
     }
 &nbsp;
@@ -1192,7 +1192,7 @@ export class ErrorHandlingService {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-02T12:54:20.004Z
+                at 2025-09-03T15:21:58.150Z
             </div>
         <script src="../prettify.js"></script>
         <script>

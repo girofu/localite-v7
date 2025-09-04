@@ -51,7 +51,7 @@ const checks = [
     description: "執行所有單元測試",
     check: () => {
       try {
-        execSync("npm test -- --passWithNoTests", { stdio: "pipe" });
+        execSync("npm test", { stdio: "pipe" });
         return { passed: true, message: "單元測試通過" };
       } catch (error) {
         return {
@@ -71,20 +71,34 @@ const checks = [
         const output = execSync("npm run test:coverage", { stdio: "pipe" });
         const coverageText = output.toString();
 
-        // 檢查覆蓋率門檻
-        const linesMatch = coverageText.match(
-          /All files[^│]+│[^│]+│[^│]+│[^│]+│[^│]+/
+        // 解析總覆蓋率數據
+        const coverageMatch = coverageText.match(
+          /All files\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|/
         );
-        if (!linesMatch) {
-          return { passed: false, message: "無法解析覆蓋率數據" };
+
+        if (!coverageMatch) {
+          return {
+            passed: false,
+            message: "無法解析覆蓋率數據",
+            details: coverageText,
+          };
         }
 
-        // 簡單檢查是否有覆蓋率數據
-        const hasCoverage =
-          coverageText.includes("coverage") && coverageText.includes("%");
+        const statements = parseFloat(coverageMatch[1]);
+        const branches = parseFloat(coverageMatch[2]);
+        const functions = parseFloat(coverageMatch[3]);
+        const lines = parseFloat(coverageMatch[4]);
+
+        // 檢查是否達到門檻 (30%)
+        const minThreshold = 30;
+        const passed = statements >= minThreshold;
+
         return {
-          passed: hasCoverage,
-          message: hasCoverage ? "覆蓋率檢查完成" : "覆蓋率數據不完整",
+          passed: passed,
+          message: passed
+            ? `覆蓋率檢查通過 (${statements}% >= ${minThreshold}%)`
+            : `覆蓋率未達門檻 (${statements}% < ${minThreshold}%)`,
+          details: `語句: ${statements}%, 分支: ${branches}%, 函數: ${functions}%, 行: ${lines}%`,
         };
       } catch (error) {
         return {

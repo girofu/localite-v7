@@ -58,7 +58,7 @@ export class ExpoSpeechService {
   /**
    * 初始化語音列表
    */
-  private async initializeVoices(): void {
+  private async initializeVoices(): Promise<void> {
     try {
       const voices = await Speech.getAvailableVoicesAsync();
       this.state.voices = voices;
@@ -189,7 +189,8 @@ export class ExpoSpeechService {
   findBestVoice(language: string, gender?: 'MALE' | 'FEMALE'): Speech.Voice | null {
     const filteredVoices = this.state.voices.filter(voice => {
       if (voice.language !== language) return false;
-      if (gender && voice.quality !== gender) return false;
+      // Note: Expo Speech SDK doesn't have gender property in Voice object
+      // Gender filtering would need to be implemented differently if needed
       return true;
     });
 

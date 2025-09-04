@@ -142,70 +142,24 @@ export default function ExhibitCardPreviewScreen({ onClose }: { onClose: () => v
 }
 
 const styles = StyleSheet.create({
-  chatBubble: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    marginTop: 8,
-    padding: 16,
-  },
-  chatExhibitCardsList: {
-    paddingRight: 100, // 讓第二張卡片露出一半
-  },
-  chatText: {
-    color: '#333',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 16,
-  },
   container: {
+    flex: 1,
     backgroundColor: '#232323',
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  customCardStyle: {
-    backgroundColor: '#f8f9fa',
-    borderColor: '#e9ecef',
-    borderWidth: 2,
-  },
-  customDescriptionStyle: {
-    color: '#6c757d',
-    fontSize: 13,
-  },
-  customTitleStyle: {
-    color: '#495057',
-    fontSize: 18,
-  },
-  exhibitCardStyle: {
-    // 可以自訂樣式
-  },
-  exhibitCardWrapper: {
-    marginRight: 8,
-    width: 180,
-  },
-  exhibitCardsList: {
-    paddingHorizontal: 16,
-    paddingRight: 100, // 讓第二張卡片露出一半
   },
   header: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingTop: 50,
     paddingHorizontal: 16,
-    paddingTop: 48,
+    paddingBottom: 20,
+    backgroundColor: 'transparent',
   },
   headerIcon: {
-    alignItems: 'center',
+    width: 40,
     height: 40,
     justifyContent: 'center',
-    width: 40,
+    alignItems: 'center',
   },
   headerIconText: {
     color: '#fff',
@@ -218,22 +172,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 3,
   },
-  section: {
-    marginBottom: 32,
+  content: {
+    flex: 1,
   },
-  sectionHint: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 12,
-    opacity: 0.6,
-    textAlign: 'center',
-  },
-  sectionLabel: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    opacity: 0.8,
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
   },
   sectionTitle: {
     color: '#fff',
@@ -242,8 +186,64 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
+  section: {
+    marginBottom: 32,
+  },
+  sectionLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    opacity: 0.8,
+  },
+  sectionHint: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.6,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  exhibitCardsList: {
+    paddingHorizontal: 16,
+    paddingRight: 100, // 讓第二張卡片露出一半
+  },
+  exhibitCardWrapper: {
+    width: 180,
+    marginRight: 8,
+  },
+  exhibitCardStyle: {
+    // 可以自訂樣式
+  },
   singleCardContainer: {
     alignItems: 'center',
     paddingHorizontal: 16,
+  },
+  customCardStyle: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+  },
+  customTitleStyle: {
+    color: '#495057',
+    fontSize: 18,
+  },
+  customDescriptionStyle: {
+    color: '#6c757d',
+    fontSize: 13,
+  },
+  chatBubble: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+  },
+  chatText: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  chatExhibitCardsList: {
+    paddingRight: 100, // 讓第二張卡片露出一半
   },
 }); 

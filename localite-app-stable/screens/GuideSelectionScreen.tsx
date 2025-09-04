@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, Dimensions, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GUIDES } from '../data/guide';
 import { PLACES } from '../data/places';
@@ -8,6 +8,7 @@ const { width } = Dimensions.get('window');
 
 type PlaceWithGuide = {
   id: string;
+  id_no: string; // 添加 id_no 屬性
   name: string;
   lat: number;
   lng: number;
@@ -16,22 +17,56 @@ type PlaceWithGuide = {
   recommendedGuide?: string;
 };
 
-export default function GuideSelectionScreen({ placeId, onBack, onConfirm }: any) {
+export default function GuideSelectionScreen({ placeId, onBack, onConfirm, onNavigate }: any) {
   const place = PLACES.find(p => p.id === placeId) as PlaceWithGuide | undefined;
   const recommendedGuideId = place?.recommendedGuide;
-  let guides = [...GUIDES];
+  
+  // 根據地點過濾可用的導覽員
+  let guides = GUIDES.filter(guide => {
+    // 如果導覽員有地點限制，檢查當前地點的 id_no 是否在允許清單中
+    if (guide.limitedPlaces) {
+      return guide.limitedPlaces.includes(place?.id_no || '');
+    }
+    // 沒有地點限制的導覽員在所有地點都可以選擇
+    return true;
+  });
+  
+  // 如果有推薦導覽員且該導覽員在過濾後的清單中，將其排在最前面
   if (recommendedGuideId) {
-    const idx = guides.findIndex(g => g.id === recommendedGuideId);
-    if (idx > -1) {
-      const [rec] = guides.splice(idx, 1);
-      guides = [rec, ...guides];
+    const recommendedGuide = guides.find(g => g.id === recommendedGuideId);
+    if (recommendedGuide) {
+      guides = guides.filter(g => g.id !== recommendedGuideId);
+      guides = [recommendedGuide, ...guides];
     }
   }
 
   const [current, setCurrent] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const guide = guides[current];
+
+  // 閃爍動畫效果
+  useEffect(() => {
+    if (recommendedGuideId && guide.id === recommendedGuideId) {
+      const startFadeAnimation = () => {
+        Animated.sequence([
+          Animated.timing(fadeAnim, {
+            toValue: 0.3,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ]).start(() => startFadeAnimation()); // 循環播放
+      };
+      
+      startFadeAnimation();
+    }
+  }, [recommendedGuideId, guide.id, fadeAnim]);
 
   return (
     <LinearGradient
@@ -39,7 +74,7 @@ export default function GuideSelectionScreen({ placeId, onBack, onConfirm }: any
       style={styles.container}
     >
       {/* Header */}
-      <TouchableOpacity style={styles.menuIcon} onPress={onBack}>
+      <TouchableOpacity style={styles.menuIcon} onPress={() => onNavigate && onNavigate('drawerNavigation')}>
         <Image source={require('../assets/icons/icon_menu.png')} style={styles.topIcon} />
       </TouchableOpacity>
       <TouchableOpacity style={styles.returnIcon} onPress={onBack}>
@@ -53,7 +88,10 @@ export default function GuideSelectionScreen({ placeId, onBack, onConfirm }: any
           </TouchableOpacity>
           <View style={styles.guideBox}>
             {recommendedGuideId && guide.id === recommendedGuideId && (
-              <Image source={require('../assets/icons/recom.png')} style={styles.recomIcon} />
+              <Animated.View style={[styles.recommendedContainer, { opacity: fadeAnim }]}>
+                <Image source={require('../assets/icons/icon_sparkles.png')} style={styles.sparklesIcon} />
+                <Text style={styles.recommendedText}>地點限定</Text>
+              </Animated.View>
             )}
             <Image source={guide.image} style={styles.guideImage} />
           </View>
@@ -72,44 +110,55 @@ export default function GuideSelectionScreen({ placeId, onBack, onConfirm }: any
 }
 
 const styles = StyleSheet.create({
-  angleIcon: {
-    height: 40,
-    resizeMode: 'contain',
-    tintColor: '#fff',
-    width: 40,
-  },
-  confirmBtn: {
-    alignItems: 'center',
-    backgroundColor: '#232323',
-    borderColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    elevation: 2,
-    marginTop: 12,
-    paddingHorizontal: 48,
-    paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  confirmBtnText: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    letterSpacing: 3,
-  },
   container: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 48,
+    paddingTop: 60,
+  },
+  menuIcon: {
+    position: 'absolute',
+    top: 60,
+    left: 16,
+    zIndex: 10,
+  },
+  returnIcon: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    zIndex: 10,
+  },
+  topIcon: {
+    width: 32,
+    height: 32,
+    resizeMode: 'contain',
   },
   content: {
-    alignItems: 'center',
     flex: 1,
+    width: '100%',
+    alignItems: 'center',
     justifyContent: 'flex-start',
     marginTop: 200,
-    width: '100%',
+  },
+  title: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginTop: 0,
+    marginBottom: 0,
+    textAlign: 'center',
+    letterSpacing: 2,
+    position: 'absolute',
+    top: 150,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
+  guideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   guideBox: {
     alignItems: 'center',
@@ -117,19 +166,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     position: 'relative',
   },
-  guideDesc: {
-    color: '#fff',
-    fontSize: 18,
-    lineHeight: 26,
-    marginBottom: 24,
-    marginTop: 16,
-    paddingHorizontal: 24,
-    textAlign: 'center',
-  },
+
   guideImage: {
+    width: 180,
     height: 180,
     resizeMode: 'contain',
-    width: 180,
   },
   guideName: {
     color: '#fff',
@@ -137,51 +178,61 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 3,
   },
-  guideRow: {
+  guideDesc: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+    lineHeight: 26,
+    paddingHorizontal: 24,
+  },
+  confirmBtn: {
+    backgroundColor: '#232323',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderWidth: 1,
+    borderColor: '#fff',
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 16,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  menuIcon: {
-    left: 16,
-    position: 'absolute',
-    top: 46,
-    zIndex: 10,
+  confirmBtnText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    letterSpacing: 3,
   },
-  recomIcon: {
-    height: 32,
-    left: '50%',
-    marginLeft: -32,
-    position: 'absolute',
+  angleIcon: {
+    width: 40,
+    height: 40,
     resizeMode: 'contain',
+    tintColor: '#fff',
+  },
+  recommendedContainer: {
+    position: 'absolute',
     top: -32,
-    width: 64,
+    left: '50%',
+    transform: [{ translateX: -50 }], // 使用 transform 來置中，比 marginLeft 更準確
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
     zIndex: 2,
   },
-  returnIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 46,
-    zIndex: 10,
+  sparklesIcon: {
+    width: 20.4,
+    height: 20.4,
+    marginRight: 4,
   },
-  title: {
+  recommendedText: {
     color: '#fff',
-    fontSize: 32,
+    fontSize: 14,
     fontWeight: 'bold',
-    left: 0,
-    letterSpacing: 2,
-    marginBottom: 0,
-    marginTop: 0,
-    position: 'absolute',
-    right: 0,
-    textAlign: 'center',
-    top: 135,
-    zIndex: 1,
-  },
-  topIcon: {
-    height: 32,
-    resizeMode: 'contain',
-    width: 32,
   },
 });

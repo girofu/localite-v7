@@ -109,53 +109,24 @@ export default function ButtonOptionPreviewScreen({ onClose }: { onClose: () => 
 }
 
 const styles = StyleSheet.create({
-  buttonContainer: {
-    gap: 12,
-  },
-  chatBubble: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    marginTop: 8,
-    padding: 16,
-  },
-  chatText: {
-    color: '#333',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 16,
-  },
   container: {
+    flex: 1,
     backgroundColor: '#232323',
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  dangerButton: {
-    backgroundColor: '#f44336',
-    borderColor: '#f44336',
-  },
-  dangerText: {
-    color: '#fff',
   },
   header: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingTop: 20,
     paddingHorizontal: 16,
-    paddingTop: 48,
+    paddingBottom: 20,
+    backgroundColor: 'transparent',
   },
   headerIcon: {
-    alignItems: 'center',
+    width: 40,
     height: 40,
     justifyContent: 'center',
-    width: 40,
+    alignItems: 'center',
   },
   headerIconText: {
     color: '#fff',
@@ -167,6 +138,45 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     letterSpacing: 3,
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    opacity: 0.8,
+  },
+  buttonContainer: {
+    gap: 12,
+  },
+  chatBubble: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+  },
+  chatText: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+    marginBottom: 16,
   },
   primaryButton: {
     backgroundColor: '#2196f3',
@@ -182,21 +192,11 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: '#fff',
   },
-  section: {
-    marginBottom: 32,
+  dangerButton: {
+    backgroundColor: '#f44336',
+    borderColor: '#f44336',
   },
-  sectionLabel: {
+  dangerText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    opacity: 0.8,
-  },
-  sectionTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
   },
 }); 

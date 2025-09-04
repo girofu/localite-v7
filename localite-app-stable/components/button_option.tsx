@@ -23,12 +23,13 @@ const ButtonOption: React.FC<ButtonOptionProps> = ({
   containerStyle,
   textStyle,
   disabled = false,
-}) => (
+}) => {
+  return (
     <TouchableOpacity 
       style={[
         styles.container, 
         containerStyle,
-        disabled && styles.disabled,
+        disabled && styles.disabled
       ]} 
       onPress={onPress}
       activeOpacity={0.8}
@@ -39,22 +40,19 @@ const ButtonOption: React.FC<ButtonOptionProps> = ({
       </Text>
     </TouchableOpacity>
   );
+};
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
     backgroundColor: 'transparent',
     borderColor: '#fff',
-    borderRadius: 24,
     borderWidth: 2,
-    justifyContent: 'center',
-    marginTop: 16,
-    paddingHorizontal: 24,
+    borderRadius: 24,
     paddingVertical: 12,
-  },
-  disabled: {
-    borderColor: '#666',
-    opacity: 0.5,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: {
     color: '#fff',
@@ -62,6 +60,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 2,
     textAlign: 'center',
+  },
+  disabled: {
+    opacity: 0.5,
+    borderColor: '#666',
   },
 });
 

@@ -24,17 +24,12 @@ jest.mock('firebase/auth', () => ({
   signInWithPopup: jest.fn()
 }));
 
-// Mock Expo Google Sign In
-jest.mock('expo-google-app-auth', () => ({
-  logInAsync: jest.fn(() => 
-    Promise.resolve({
-      type: 'success',
-      user: {
-        email: 'test@google.com',
-        name: 'Test User'
-      }
-    })
-  )
+// Mock Expo Auth Session (replacement for expo-google-app-auth)
+jest.mock('expo-auth-session', () => ({
+  makeRedirectUri: jest.fn(() => 'mock-redirect-uri'),
+  useAuthRequest: jest.fn(() => [null, null, jest.fn()]),
+  startAsync: jest.fn(() => Promise.resolve({ type: 'success' })),
+  revokeAsync: jest.fn(() => Promise.resolve({})),
 }));
 
 // Mock React Native modules

@@ -47,7 +47,7 @@ const ExhibitCard: React.FC<ExhibitCardProps> = ({
       style={[
         styles.container, 
         containerStyle,
-        disabled && styles.disabled,
+        disabled && styles.disabled
       ]} 
       onPress={handlePress}
       activeOpacity={0.8}
@@ -82,42 +82,42 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    elevation: 4,
-    height: 230,
-    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
     width: 180,
-  },
-  contentContainer: {
-    flex: 1,
-    padding: 12,
-  },
-  description: {
-    color: '#666',
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  image: {
-    height: '100%',
-    width: '100%',
+    height: 230,
+    overflow: 'hidden',
   },
   imageContainer: {
     height: 120,
     overflow: 'hidden',
   },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  contentContainer: {
+    padding: 12,
+    flex: 1,
+  },
   title: {
-    color: '#333',
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#333',
     lineHeight: 20,
     marginBottom: 6,
+  },
+  description: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+    flex: 1,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });
 

@@ -109,6 +109,7 @@ export class FirebaseAuthService {
 
   /**
    * Google 登入
+   * 注意：此方法需要在組件層級實作，因為使用了 expo-auth-session hooks
    */
   async signInWithGoogle(): Promise<AuthResult> {
     if (this.isTestEnvironment) {
@@ -116,9 +117,38 @@ export class FirebaseAuthService {
       return this.mockSignInWithGoogle();
     }
 
-    // TODO: 實作真實的 Google 登入
-    // 需要整合 expo-auth-session 或類似的解決方案
-    throw new Error('Google sign in not implemented yet');
+    // 這個方法需要在 React 組件中實作 Google 登入
+    // 因為 expo-auth-session 使用 React Hooks
+    // 請在需要 Google 登入的組件中直接使用以下代碼：
+    /*
+    import * as Google from 'expo-auth-session/providers/google';
+    import * as WebBrowser from 'expo-web-browser';
+    import { makeRedirectUri } from 'expo-auth-session';
+    import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+
+    WebBrowser.maybeCompleteAuthSession();
+
+    const [request, response, promptAsync] = Google.useAuthRequest({
+      clientId: '738517399852-vfbbbqnopdlao6iunc1boqp2ihokvu70.apps.googleusercontent.com',
+      scopes: ['openid', 'profile', 'email'],
+    });
+
+    useEffect(() => {
+      if (response?.type === 'success') {
+        const { access_token, id_token } = response.params;
+        if (id_token) {
+          const credential = GoogleAuthProvider.credential(id_token, access_token);
+          signInWithCredential(auth, credential).then((userCredential) => {
+            // 處理登入成功
+          });
+        }
+      }
+    }, [response]);
+
+    // 在按鈕點擊中調用: promptAsync()
+    */
+
+    throw new Error('Google 登入需要在 React 組件中實作。請參考註釋中的實作範例。');
   }
 
   /**

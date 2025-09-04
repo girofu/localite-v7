@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function LearningSheetScreen({ onClose }) {
+export default function LearningSheetScreen({ onClose, onNavigate }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerIcon}>
+        <TouchableOpacity style={styles.headerIcon} onPress={() => onNavigate && onNavigate('drawerNavigation')}>
           <Image source={require('../assets/icons/icon_menu.png')} style={styles.icon} />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
@@ -21,18 +21,18 @@ export default function LearningSheetScreen({ onClose }) {
 }
 
 const styles = StyleSheet.create({
-  centerContent: { alignItems: 'center', flex: 1, justifyContent: 'center' },
-  container: { backgroundColor: '#232323', flex: 1 },
+  container: { flex: 1, backgroundColor: '#232323' },
   header: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingTop: 20,
     paddingHorizontal: 16,
-    paddingTop: 48,
+    paddingBottom: 20,
+    backgroundColor: 'transparent',
   },
-  headerIcon: { alignItems: 'center', height: 40, justifyContent: 'center', width: 40 },
-  icon: { height: 28, resizeMode: 'contain', width: 28 },
+  headerIcon: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  icon: { width: 28, height: 28, resizeMode: 'contain' },
+  centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   text: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
 });

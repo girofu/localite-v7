@@ -4,7 +4,6 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { PLACES } from '../data/places';
 import { getDistance } from '../utils/distance';
-import { useVenueEntryContext } from '../src/contexts/VenueEntryContext';
 
 const { width, height } = Dimensions.get('window');
 const DISTANCE_LIMIT = 500; // 公尺
@@ -15,16 +14,14 @@ export default function MapScreen({ onBack, onPlaceSelect }: { onBack?: () => vo
   const [visiblePlaces, setVisiblePlaces] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const { enterVenueByGPS, isLoading: venueLoading, error: venueError } = useVenueEntryContext();
-
   useEffect(() => {
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('未取得定位權限');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({});
+      let loc = await Location.getCurrentPositionAsync({});
       setLocation(loc);
     })();
   }, []);
@@ -36,7 +33,7 @@ export default function MapScreen({ onBack, onPlaceSelect }: { onBack?: () => vo
           location.coords.latitude,
           location.coords.longitude,
           place.lat,
-          place.lng,
+          place.lng
         );
         return { ...place, distance };
       }).filter(place => place.distance <= DISTANCE_LIMIT);
@@ -79,20 +76,7 @@ export default function MapScreen({ onBack, onPlaceSelect }: { onBack?: () => vo
           <Marker
             key={place.id}
             coordinate={{ latitude: place.lat, longitude: place.lng }}
-            onPress={async () => {
-              if (location) {
-                try {
-                  await enterVenueByGPS(place.id, {
-                    lat: location.coords.latitude,
-                    lng: location.coords.longitude,
-                  });
-                  onPlaceSelect?.(place.id);
-                } catch (error) {
-                  console.error('進入場域失敗:', error);
-                  setErrorMsg('無法進入場域，請稍後再試');
-                }
-              }
-            }}
+            onPress={() => onPlaceSelect?.(place.id)}
           >
             <View style={{ alignItems: 'center' }}>
               <Image
@@ -135,20 +119,7 @@ export default function MapScreen({ onBack, onPlaceSelect }: { onBack?: () => vo
             <TouchableOpacity
               key={place.id}
               style={styles.card}
-              onPress={async () => {
-                if (location) {
-                  try {
-                    await enterVenueByGPS(place.id, {
-                      lat: location.coords.latitude,
-                      lng: location.coords.longitude,
-                    });
-                    onPlaceSelect?.(place.id);
-                  } catch (error) {
-                    console.error('進入場域失敗:', error);
-                    setErrorMsg('無法進入場域，請稍後再試');
-                  }
-                }
-              }}
+              onPress={() => onPlaceSelect?.(place.id)}
             >
               <Image source={place.image} style={styles.cardImage} />
               <Text style={styles.cardTitle}>{place.name}</Text>
@@ -162,88 +133,88 @@ export default function MapScreen({ onBack, onPlaceSelect }: { onBack?: () => vo
 }
 
 const styles = StyleSheet.create({
-  card: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    elevation: 8,
-    marginRight: 16,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    width: 180,
+  container: {
+    flex: 1,
+  },
+  map: {
+    width: '100%',
+    height: '100%',
   },
   cardContainer: {
-    alignItems: 'center',
-    bottom: 100,
     position: 'absolute',
+    bottom: 100,
     width: '100%',
     zIndex: 20,
+    alignItems: 'center',
+  },
+  card: {
+    width: 180,
+    marginRight: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+    alignItems: 'center',
+  },
+  cardImage: {
+    width: 160,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 4,
   },
   cardDistance: {
     color: '#888',
     fontSize: 14,
   },
-  cardImage: {
-    borderRadius: 8,
-    height: 100,
-    marginBottom: 8,
-    width: 160,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
   centered: {
-    alignItems: 'center', flex: 1, justifyContent: 'center',
+    flex: 1, justifyContent: 'center', alignItems: 'center'
   },
-  container: {
-    flex: 1,
+  modalContainer: {
+    flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)'
+  },
+  modalContent: {
+    backgroundColor: '#fff', padding: 24, borderRadius: 12, alignItems: 'center'
+  },
+  modalButton: {
+    marginTop: 16, padding: 8, backgroundColor: '#eee', borderRadius: 8
   },
   header: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
+    width: '100%',
     flexDirection: 'row',
-    left: 0,
-    paddingBottom: 16,
-    paddingTop: 48,
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: 'transparent',
     position: 'absolute',
     top: 0,
-    width: '100%',
+    left: 0,
     zIndex: 10,
-  },
-  headerIcon: {
-    height: 32,
-    resizeMode: 'contain',
-    width: 32,
   },
   headerLeft: {
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  headerIcon: {
+    width: 32,
+    height: 32,
+    resizeMode: 'contain',
+  },
   headerTitle: {
-    color: '#232323',
     flex: 1,
+    textAlign: 'center',
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#232323',
     letterSpacing: 2,
     marginRight: 48,
-    textAlign: 'center',
-  },
-  map: {
-    height: '100%',
-    width: '100%',
-  },
-  modalButton: {
-    backgroundColor: '#eee', borderRadius: 8, marginTop: 16, padding: 8,
-  },
-  modalContainer: {
-    alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)', flex: 1, justifyContent: 'center',
-  },
-  modalContent: {
-    alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 24,
   },
 });

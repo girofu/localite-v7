@@ -1,28 +1,17 @@
 {
-  "compilerOptions": {
-    "target": "es2017",
-    "lib": [
-      "es2017",
-      "es2018",
-      "es2019"
-    ],
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "downlevelIteration": true,
-    "skipLibCheck": true,
-    "strict": false,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "resolveJsonModule": true
-  },
   "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules"
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ]
 }

@@ -25,12 +25,13 @@ const ButtonCamera: React.FC<ButtonCameraProps> = ({
   textStyle,
   iconStyle,
   disabled = false,
-}) => (
+}) => {
+  return (
     <TouchableOpacity 
       style={[
         styles.container, 
         containerStyle,
-        disabled && styles.disabled,
+        disabled && styles.disabled
       ]} 
       onPress={onPress}
       activeOpacity={0.8}
@@ -48,33 +49,30 @@ const ButtonCamera: React.FC<ButtonCameraProps> = ({
       </View>
     </TouchableOpacity>
   );
+};
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
     backgroundColor: 'transparent',
     borderColor: '#fff',
-    borderRadius: 24,
     borderWidth: 2,
-    justifyContent: 'center',
-    marginTop: 16,
-    paddingHorizontal: 24,
+    borderRadius: 24,
     paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   contentContainer: {
-    alignItems: 'center',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  disabled: {
-    borderColor: '#666',
-    opacity: 0.5,
-  },
   icon: {
+    width: 20,
     height: 20,
     marginRight: 8,
     tintColor: '#fff',
-    width: 20,
   },
   text: {
     color: '#fff',
@@ -82,6 +80,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 2,
     textAlign: 'center',
+  },
+  disabled: {
+    opacity: 0.5,
+    borderColor: '#666',
   },
 });
 

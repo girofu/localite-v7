@@ -126,56 +126,24 @@ export default function ButtonCameraPreviewScreen({ onClose }: { onClose: () => 
 }
 
 const styles = StyleSheet.create({
-  buttonContainer: {
-    gap: 12,
-  },
-  chatBubble: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    marginTop: 8,
-    padding: 16,
-  },
-  chatText: {
-    color: '#333',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 16,
-  },
   container: {
+    flex: 1,
     backgroundColor: '#232323',
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  emergencyButton: {
-    backgroundColor: '#f44336',
-    borderColor: '#f44336',
-  },
-  emergencyIcon: {
-    tintColor: '#fff',
-  },
-  emergencyText: {
-    color: '#fff',
   },
   header: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingTop: 20,
     paddingHorizontal: 16,
-    paddingTop: 48,
+    paddingBottom: 20,
+    backgroundColor: 'transparent',
   },
   headerIcon: {
-    alignItems: 'center',
+    width: 40,
     height: 40,
     justifyContent: 'center',
-    width: 40,
+    alignItems: 'center',
   },
   headerIconText: {
     color: '#fff',
@@ -188,33 +156,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 3,
   },
-  largeIcon: {
-    height: 28,
-    width: 28,
+  content: {
+    flex: 1,
   },
-  mediumIcon: {
-    height: 24,
-    width: 24,
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
   },
-  primaryButton: {
-    backgroundColor: '#2196f3',
-    borderColor: '#2196f3',
-  },
-  primaryIcon: {
-    tintColor: '#fff',
-  },
-  primaryText: {
+  sectionTitle: {
     color: '#fff',
-  },
-  secondaryButton: {
-    backgroundColor: '#4caf50',
-    borderColor: '#4caf50',
-  },
-  secondaryIcon: {
-    tintColor: '#fff',
-  },
-  secondaryText: {
-    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 32,
@@ -226,15 +180,61 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     opacity: 0.8,
   },
-  sectionTitle: {
+  buttonContainer: {
+    gap: 12,
+  },
+  chatBubble: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+  },
+  chatText: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  primaryButton: {
+    backgroundColor: '#2196f3',
+    borderColor: '#2196f3',
+  },
+  primaryText: {
     color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
+  },
+  primaryIcon: {
+    tintColor: '#fff',
+  },
+  secondaryButton: {
+    backgroundColor: '#4caf50',
+    borderColor: '#4caf50',
+  },
+  secondaryText: {
+    color: '#fff',
+  },
+  secondaryIcon: {
+    tintColor: '#fff',
+  },
+  emergencyButton: {
+    backgroundColor: '#f44336',
+    borderColor: '#f44336',
+  },
+  emergencyText: {
+    color: '#fff',
+  },
+  emergencyIcon: {
+    tintColor: '#fff',
   },
   smallIcon: {
-    height: 16,
     width: 16,
+    height: 16,
+  },
+  mediumIcon: {
+    width: 24,
+    height: 24,
+  },
+  largeIcon: {
+    width: 28,
+    height: 28,
   },
 }); 

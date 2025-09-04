@@ -99,36 +99,35 @@ export default function MiniCardPreviewScreen({ onClose }: { onClose: () => void
 }
 
 const styles = StyleSheet.create({
-  cardLabel: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    opacity: 0.8,
-  },
-  cardSection: {
-    marginBottom: 32,
-  },
-  cardsRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  chatBubble: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 16,
-    marginTop: 8,
-    padding: 16,
-  },
-  chatText: {
-    color: '#333',
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 16,
-  },
   container: {
-    backgroundColor: '#232323',
     flex: 1,
+    backgroundColor: '#232323',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 50,
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    backgroundColor: 'transparent',
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerIconText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    letterSpacing: 3,
   },
   content: {
     flex: 1,
@@ -136,6 +135,40 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
     paddingBottom: 32,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  cardSection: {
+    marginBottom: 32,
+  },
+  cardLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    opacity: 0.8,
+  },
+  cardsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  chatBubble: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+  },
+  chatText: {
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 24,
+    marginBottom: 16,
   },
   customCard: {
     backgroundColor: '#e3f2fd',
@@ -150,38 +183,5 @@ const styles = StyleSheet.create({
   },
   darkText: {
     color: '#fff',
-  },
-  header: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    paddingTop: 48,
-  },
-  headerIcon: {
-    alignItems: 'center',
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  headerIconText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    letterSpacing: 3,
-  },
-  sectionTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    textAlign: 'center',
   },
 }); 
