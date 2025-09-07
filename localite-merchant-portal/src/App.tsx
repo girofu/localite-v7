@@ -1,5 +1,5 @@
 /**
- * 管理員系統主應用組件
+ * 商家系統主應用組件
  */
 
 import React from 'react';
@@ -7,23 +7,18 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import AdminLayout from './components/Layout/AdminLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
-import UsersPage from './pages/UsersPage';
-import MerchantsPage from './pages/MerchantsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import AuditLogsPage from './pages/AuditLogsPage';
-import SettingsPage from './pages/SettingsPage';
+import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
 
 // 創建主題
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: '#4CAF50', // 綠色主題，區別於管理員系統的藍色
     },
     secondary: {
-      main: '#dc004e',
+      main: '#FF9800',
     },
     background: {
       default: '#f5f5f5',
@@ -34,19 +29,50 @@ const theme = createTheme({
   },
 });
 
+// 簡單的商家布局
+const MerchantLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { merchant, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('登出失敗:', error);
+    }
+  };
+
+  return (
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Localite 商家管理系統 - {merchant?.businessName}
+          </Typography>
+          <Button color="inherit" onClick={handleSignOut}>
+            登出
+          </Button>
+        </Toolbar>
+      </AppBar>
+      <Box sx={{ p: 3 }}>
+        {children}
+      </Box>
+    </Box>
+  );
+};
+
 // 受保護的路由組件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isMerchant, loading } = useAuth();
 
   if (loading) {
     return <div>載入中...</div>;
   }
 
-  if (!user || !isAdmin) {
+  if (!user || !isMerchant) {
     return <Navigate to="/login" replace />;
   }
 
-  return <AdminLayout>{children}</AdminLayout>;
+  return <MerchantLayout>{children}</MerchantLayout>;
 };
 
 // 主要路由組件
@@ -59,46 +85,6 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/users"
-        element={
-          <ProtectedRoute>
-            <UsersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/merchants"
-        element={
-          <ProtectedRoute>
-            <MerchantsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/analytics"
-        element={
-          <ProtectedRoute>
-            <AnalyticsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/audit-logs"
-        element={
-          <ProtectedRoute>
-            <AuditLogsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <SettingsPage />
           </ProtectedRoute>
         }
       />
