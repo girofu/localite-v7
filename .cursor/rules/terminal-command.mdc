@@ -1,6 +1,7 @@
 ---
 alwaysApply: true
 ---
+
 ## 📋 終端機指令規範 (新增)
 
 ### 標準化指令集
@@ -134,7 +135,7 @@ cd localite-admin-dashboard && npm start     # 啟動管理員系統
 cd localite-merchant-portal && npm start     # 啟動商家系統
 
 # 子系統管理
-cd localite-app-stable && npm start          # 用戶 App
+cd localite-app-merged && npm start          # 用戶 App
 cd localite-admin-dashboard && npm start     # 管理員後台 (port 3001)
 cd localite-merchant-portal && npm start     # 商家門戶 (port 3002)
 

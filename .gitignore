@@ -7,6 +7,8 @@
 
 # Firebase 服務帳號憑證 (敏感檔案)
 **/firebase-service-account.json
+**/service-account-key.json
+**/firebase-adminsdk-*.json
 **/google-services.json
 **/GoogleService-Info.plist
 
