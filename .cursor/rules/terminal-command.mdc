@@ -284,3 +284,163 @@ rm -rf localite-logs-dashboard/server/logs/*.log          # 清空所有日誌�
 cd localite-app-stable && grep -r "logger\." src/         # 查看已整合的日誌點
 cd localite-app-stable && grep -r "LoggingService" src/   # 查看日誌服務使用情況
 ```
+
+#### MCP 工具與 AI 開發指令
+
+```bash
+# MCP (Model Context Protocol) 工具
+# Serena MCP - 程式碼分析與重構
+mcp_serena_find_symbol "ComponentName"                   # 查找符號定義
+mcp_serena_find_referencing_symbols "FunctionName"      # 查找符號引用
+mcp_serena_search_for_pattern "regex_pattern"           # 搜索特定模式
+mcp_serena_get_symbols_overview "file.tsx"              # 獲取文件符號概覽
+mcp_serena_replace_symbol_body "ClassName" "NewBody"    # 替換符號內容
+mcp_serena_list_memories                                 # 列出專案記憶
+mcp_serena_read_memory "memory_name"                     # 讀取特定記憶
+
+# GitHub MCP - 版本控制與協作
+mcp_Github_search_repositories "query"                  # 搜索 GitHub 倉庫
+mcp_Github_search_code "search_query"                   # 搜索程式碼
+mcp_Github_get_repository "owner/repo"                  # 獲取倉庫資訊
+mcp_Github_create_issue "title" "body"                  # 建立 Issue
+mcp_Github_create_pull_request "title" "head" "base"    # 建立 Pull Request
+mcp_Github_push_files --files="[{path, content}]"       # 批量推送文件
+
+# Context7 MCP - 函式庫文檔查詢
+mcp_Context7_resolve-library-id "react-native"          # 解析函式庫 ID
+mcp_Context7_get-library-docs "/react/docs"             # 獲取函式庫文檔
+```
+
+#### AI 輔助開發指令
+
+```bash
+# Google AI Studio 整合
+npm run ai:generate-tour                                # AI 生成旅遊內容
+npm run ai:translate-content                            # AI 翻譯內容
+npm run ai:optimize-images                              # AI 優化圖片
+npm run ai:generate-descriptions                        # AI 生成描述
+
+# 語音合成 (Google TTS)
+npm run tts:test                                        # 測試語音合成
+npm run tts:batch-generate                              # 批量生成語音
+npm run tts:clear-cache                                 # 清除 TTS 快取
+
+# Firebase AI 功能
+npm run firebase:deploy-functions                       # 部署 Firebase 函數
+npm run firebase:logs                                   # 查看 Firebase 日誌
+npm run firebase:test-functions                         # 測試 Firebase 函數
+```
+
+#### 進階調試與效能分析
+
+```bash
+# React Native Debugger
+npx react-devtools                                      # 啟動 React DevTools
+npx flipper                                             # 啟動 Flipper 調試器
+adb logcat | grep -i "ReactNativeJS"                    # Android 日誌過濾
+
+# 效能監控
+npm run profile:start                                   # 開始效能監控
+npm run profile:stop                                    # 停止效能監控
+npm run profile:report                                  # 生成效能報告
+npm run bundle:analyze                                  # 分析 Bundle 大小
+
+# 記憶體分析
+npm run memory:analyze                                   # 記憶體使用分析
+npm run memory:leak-detection                          # 記憶體洩漏檢測
+npm run performance:baseline                           # 建立效能基準線
+```
+
+#### 多語言與國際化指令
+
+```bash
+# i18n 國際化
+npm run i18n:extract                                    # 提取翻譯文本
+npm run i18n:validate                                   # 驗證翻譯文件
+npm run i18n:missing                                    # 檢查缺失翻譯
+npm run i18n:update-keys                                # 更新翻譯鍵值
+
+# 語言包管理
+npm run lang:add zh-TW                                  # 添加語言包
+npm run lang:remove ja                                  # 移除語言包
+npm run lang:sync                                       # 同步語言包
+```
+
+#### 資料庫與快取管理
+
+```bash
+# Firebase Firestore
+npm run firestore:backup                               # 備份 Firestore 資料
+npm run firestore:restore                              # 還原 Firestore 資料
+npm run firestore:clear-cache                          # 清除 Firestore 快取
+npm run firestore:rules-deploy                         # 部署安全規則
+npm run firestore:rules-test                           # 測試安全規則
+
+# Local Storage & AsyncStorage
+npm run storage:clear                                   # 清除本地儲存
+npm run storage:inspect                                 # 檢查儲存內容
+npm run storage:migrate                                 # 遷移儲存結構
+npm run storage:backup                                  # 備份本地資料
+```
+
+#### 安全性與檢測指令
+
+```bash
+# 安全檢查
+npm audit                                              # NPM 安全審計
+npm audit fix                                          # 修復已知漏洞
+npm run security:scan                                   # 深度安全掃描
+npm run security:api-keys-check                        # API 金鑰檢查
+npm run security:dependencies-check                    # 依賴安全檢查
+
+# 程式碼品質檢查
+npm run quality:complexity                             # 程式碼複雜度分析
+npm run quality:duplication                            # 重複程式碼檢測
+npm run quality:tech-debt                              # 技術債務評估
+npm run quality:accessibility                          # 無障礙性檢查
+```
+
+#### 自動化與 CI/CD 增強指令
+
+```bash
+# 自動化測試管道
+npm run pipeline:unit-tests                            # 執行單元測試管道
+npm run pipeline:integration-tests                     # 執行整合測試管道
+npm run pipeline:e2e-tests                             # 執行端到端測試管道
+npm run pipeline:full                                  # 執行完整測試管道
+
+# 發布準備
+npm run pre-release:checklist                          # 發布前檢查清單
+npm run pre-release:changelog                          # 生成變更日誌
+npm run pre-release:version-bump                       # 版本號遞增
+npm run pre-release:tag-create                         # 創建發布標籤
+
+# 環境同步
+npm run sync:env-to-staging                            # 同步環境到測試環境
+npm run sync:env-to-production                         # 同步環境到生產環境
+npm run sync:db-schema                                  # 同步資料庫架構
+```
+
+#### 故障排除與恢復指令
+
+```bash
+# 緊急修復
+npm run emergency:rollback                             # 緊急回滾
+npm run emergency:hotfix-deploy                        # 緊急修復部署
+npm run emergency:db-restore                           # 緊急資料庫還原
+npm run emergency:clear-all-caches                     # 清除所有快取
+
+# 系統診斷
+npm run diagnose:system                                # 系統診斷
+npm run diagnose:network                               # 網路診斷
+npm run diagnose:dependencies                          # 依賴診斷
+npm run diagnose:permissions                           # 權限診斷
+
+# 清理與重置 (增強版)
+npm run clean:deep                                     # 深度清理
+npm run clean:node-modules-all                         # 清理所有 node_modules
+npm run clean:expo-cache                               # 清理 Expo 快取
+npm run clean:metro-cache                              # 清理 Metro 快取
+npm run clean:watchman                                 # 重置 Watchman
+npm run reset:development-env                          # 重置開發環境
+```
