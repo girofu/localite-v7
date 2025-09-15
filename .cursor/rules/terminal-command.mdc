@@ -208,6 +208,10 @@ node server/server.js &                      # 背景啟動服務器
 pkill -f "server/server.js"                 # 停止日誌服務器
 pkill -9 -f "server/server.js"              # 強制停止服務器
 
+# 日誌系統智慧重啟 (推薦)
+./scripts/restart-logs-server.sh            # 智慧重啟：自動處理端口占用、重啟服務、健康檢查
+bash localite-logs-dashboard/scripts/restart-logs-server.sh  # 從根目錄執行重啟腳本
+
 # 日誌系統狀態檢查
 curl -s http://localhost:5001/api/health     # 健康檢查與系統狀態
 lsof -i :5001                               # 檢查端口 5001 佔用情況
@@ -265,7 +269,8 @@ curl -X POST http://localhost:5001/api/logs \
   -H "Content-Type: application/json" \
   -d '{"level": "error", "message": "模擬應用錯誤", "service": "error-test", "metadata": {"error_code": "APP_ERROR", "component": "RegisterScreen"}}'
 
-# 日誌系統標準化清理 (推薦)
+# 日誌系統標準化重啟與清理 (推薦)
+./localite-logs-dashboard/scripts/restart-logs-server.sh  # 智慧重啟：處理端口占用問題並重新啟動
 ./scripts/logs-system-cleanup.sh            # 執行完整的系統清理和驗證流程
 ./scripts/logs-system-cleanup.sh --quick    # 快速清理模式
 
