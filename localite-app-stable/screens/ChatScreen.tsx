@@ -8,10 +8,14 @@ import RouteCard from '../components/RouteCard';
 import MiniCard from '../components/MiniCard';
 import ButtonOption from '../components/button_option';
 import { JourneyValidationModal } from '../components/LoginValidationModal';
-import { NavigationSession } from '../src/services/PersistenceService';
+import { NavigationSession, HybridNavigationSession } from '../src/services/PersistenceService';
+import { FirestoreService } from '../src/services/FirestoreService';
+import LoggingService from '../src/services/LoggingService';
+import { GoogleAIService } from '../src/services/GoogleAIService';
+import { ChatMessage, ChatResponse } from '../src/types/ai.types';
 
 // 導覽員圖片對應表
-const GUIDE_IMAGES = {
+const GUIDE_IMAGES: Record<string, any> = {
   kuron: require('../assets/guides/kuron_guide.png'),
   pururu: require('../assets/guides/pururu_guide.png'),
   popo: require('../assets/guides/popo_guide.png'),
@@ -19,15 +23,16 @@ const GUIDE_IMAGES = {
   piglet: require('../assets/guides/piglet_guide.png'),
 };
 
-export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavigate, initialShowJourneyValidation = false, initialShowEndOptions = false, isLoggedIn = false, voiceEnabled = true }: {
+export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavigate, initialShowJourneyValidation = false, initialShowEndOptions = false, isLoggedIn = false, voiceEnabled = true, currentUser = null }: {
   onClose: () => void;
   guideId?: string;
-  placeId?: string;
+  placeId?: string | null;
   onNavigate: (screen: string, params?: any) => void;
   initialShowJourneyValidation?: boolean;
   initialShowEndOptions?: boolean;
   isLoggedIn?: boolean;
   voiceEnabled?: boolean;
+  currentUser?: any;
 }) {
   const guide = GUIDES.find(g => g.id === guideId) || GUIDES[0];
   const place = PLACES.find(p => p.id === placeId) || PLACES[0];
@@ -39,7 +44,7 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
     from: 'ai' | 'user';
     text?: string;
     guideId?: string;
-    image?: any;
+    image?: any; // 支持靜態 require() 或 {uri: string} 格式
     miniCards?: Array<{
       id: string;
       title: string;
@@ -108,29 +113,91 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
   const [showEndOptions, setShowEndOptions] = useState(initialShowEndOptions);
   const [showOptions, setShowOptions] = useState(false);
   const [showJourneyValidation, setShowJourneyValidation] = useState(initialShowJourneyValidation);
-  const scrollViewRef = useRef(null);
-  const [currentSession, setCurrentSession] = useState<NavigationSession | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [currentSession, setCurrentSession] = useState<HybridNavigationSession | null>(null);
+  const [aiService, setAiService] = useState<GoogleAIService | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string>('disabled');
+  
+  // 服務實例
+  const [firestoreService] = useState(() => new FirestoreService());
+  const [loggingService] = useState(() => new LoggingService());
 
-  // 初始化會話
+  // 初始化會話和 AI 服務
   useEffect(() => {
     const initSession = async () => {
       try {
-        // 創建新會話或恢復現有會話
-        const session = new NavigationSession();
+        // 使用混合會話系統
+        const sessionId = `session-${Date.now()}-${guideId}-${placeId}`;
+        const session = new HybridNavigationSession(sessionId, currentUser?.uid);
+        
+        // 設置基本資訊
         session.setCurrentPlace(place);
         session.setCurrentGuide(guide);
 
-        // 如果有現有的訊息，添加到會話中
-        messages.forEach(msg => session.addMessage(msg));
+        // 如果有現有的訊息，批量添加到會話中
+        if (messages.length > 0) {
+          await session.addMessages(messages);
+        }
+
+        // 如果用戶已登入，啟用遠端同步
+        if (isLoggedIn && currentUser?.uid) {
+          try {
+            console.log('🔄 啟用遠端同步功能...');
+            await session.enableRemoteSync(firestoreService, loggingService, currentUser.uid);
+            console.log('✅ 遠端同步功能已啟用');
+            
+            // 更新同步狀態
+            const status = await session.getSyncStatus();
+            setSyncStatus(status);
+            
+            // 嘗試從遠端載入現有對話
+            const loaded = await session.loadFromRemote();
+            if (loaded) {
+              console.log('✅ 從遠端載入了現有對話');
+              // 這裡可以更新 messages 狀態來反映遠端資料
+            }
+          } catch (error) {
+            console.warn('⚠️ 啟用遠端同步失敗，使用本地模式:', error);
+            setSyncStatus('error');
+          }
+        } else {
+          console.log('👤 訪客模式，僅使用本地存儲');
+          setSyncStatus('guest');
+        }
 
         setCurrentSession(session);
+
+        // 初始化 AI 服務
+        try {
+          console.log('🎯 開始初始化 AI 服務...');
+          const ai = new GoogleAIService({
+            systemPrompt: `你是 ${guide.name}，一位專業的台灣旅遊導覽員，正在為遊客介紹 ${place.name}。請以友善、專業的語調回應，提供實用的旅遊資訊和建議。請用繁體中文回覆。`
+          });
+          setAiService(ai);
+          console.log('✅ AI 服務設置成功');
+        } catch (error) {
+          console.error('❌ AI 服務初始化失敗:', error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          loggingService.error('AI service initialization failed', { 
+            error: errorMessage,
+            guideId,
+            placeId 
+          });
+        }
       } catch (error) {
         console.error('初始化會話失敗:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        loggingService.error('Session initialization failed', { 
+          error: errorMessage,
+          guideId,
+          placeId,
+          userId: currentUser?.uid 
+        });
       }
     };
 
     initSession();
-  }, []); // 只在組件初始化時執行
+  }, [guide.name, place.name, isLoggedIn, currentUser?.uid]); // 增加登入狀態和用戶 ID 依賴
 
   // 當從 Login 返回時，關閉 JourneyValidationModal，但保持 showEndOptions 狀態
   useEffect(() => {
@@ -173,22 +240,26 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
     }
   }, [messages, isTyping]);
 
-  // 組件卸載時保存會話
+  // 組件卸載時保存會話並清理資源
   useEffect(() => {
     return () => {
       if (currentSession) {
         currentSession.save().catch(error => {
           console.error('組件卸載時保存會話失敗:', error);
         });
+        
+        // 清理混合會話的額外資源
+        currentSession.cleanup();
       }
     };
   }, [currentSession]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     const userMessage = { id: Date.now(), from: 'user' as const, text: input };
     setMessages(prevMessages => [...prevMessages, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsTyping(true);
 
@@ -197,8 +268,32 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
       currentSession.addMessage(userMessage);
     }
 
-    setTimeout(() => {
-      const aiMessage = { id: Date.now() + 1, from: 'ai' as const, guideId: guide.id, text: '這是 AI 的回覆。' };
+    try {
+      let aiResponseText = '這是 AI 的回覆。'; // 預設回應
+
+      if (aiService) {
+        // 使用真實的 AI 服務
+        const chatMessage: ChatMessage = {
+          content: currentInput,
+          role: 'user',
+          timestamp: new Date()
+        };
+
+        const response: ChatResponse = await aiService.sendMessage(chatMessage, {
+          language: 'zh-TW',
+          responseStyle: 'informative'
+        });
+
+        aiResponseText = response.content;
+      }
+
+      const aiMessage = { 
+        id: Date.now() + 1, 
+        from: 'ai' as const, 
+        guideId: guide.id, 
+        text: aiResponseText 
+      };
+
       setMessages(prevMsgs => [...prevMsgs, aiMessage]);
       setIsTyping(false);
 
@@ -210,7 +305,18 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
           console.error('保存會話失敗:', error);
         });
       }
-    }, 1200);
+    } catch (error) {
+      console.error('AI 回應失敗:', error);
+      // 如果 AI 服務失敗，顯示錯誤訊息
+      const errorMessage = { 
+        id: Date.now() + 1, 
+        from: 'ai' as const, 
+        guideId: guide.id, 
+        text: '抱歉，我現在無法回應您的問題。請稍後再試或重新表達您的問題。' 
+      };
+      setMessages(prevMsgs => [...prevMsgs, errorMessage]);
+      setIsTyping(false);
+    }
   };
 
   // 處理 MiniCard 選擇
@@ -259,7 +365,7 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
     ]);
   };
 
-  const handleScroll = (event) => {
+  const handleScroll = (event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const isAtBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
     setShowScrollToBottom(!isAtBottom);
@@ -270,36 +376,203 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
     setShowEndOptions(true);
   };
 
+  // 同步狀態輔助函數
+  const getSyncStatusText = (status: string): string => {
+    switch (status) {
+      case 'synced': return '已同步';
+      case 'pending': return '待同步';
+      case 'syncing': return '同步中...';
+      case 'error': return '同步錯誤';
+      case 'offline': return '離線';
+      case 'guest': return '訪客';
+      default: return '';
+    }
+  };
+
+  const getSyncStatusStyle = (status: string) => {
+    switch (status) {
+      case 'synced': return { color: '#4CAF50' };
+      case 'pending': return { color: '#FF9800' };
+      case 'syncing': return { color: '#2196F3' };
+      case 'error': return { color: '#F44336' };
+      case 'offline': return { color: '#9E9E9E' };
+      case 'guest': return { color: '#607D8B' };
+      default: return { color: '#FFF' };
+    }
+  };
+
   // 開啟相機
   const openCamera = async () => {
     console.log('openCamera called');
     setShowOptions(false);
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      alert('需要相機權限');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync();
-    console.log('Camera result:', result);
-    if (!result.canceled) {
-      console.log('拍照結果:', result);
-      // 這裡可以處理照片，例如 setMessages([...])
+    
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        alert('需要相機權限才能拍照');
+        return;
+      }
+      
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      console.log('Camera result:', result);
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        console.log('拍照成功，URI:', imageUri);
+        
+        // 添加用戶拍照訊息到聊天
+        const userMessage = { 
+          id: Date.now(), 
+          from: 'user' as const, 
+          text: '我拍了一張照片',
+          image: { uri: imageUri }
+        };
+        
+        setMessages(prevMessages => [...prevMessages, userMessage]);
+        setIsTyping(true);
+        
+        // 更新會話
+        if (currentSession) {
+          currentSession.addMessage(userMessage);
+        }
+        
+        // AI 回應照片
+        const aiMessage = { 
+          id: Date.now() + 1, 
+          from: 'ai' as const, 
+          guideId: guide.id, 
+          text: '我看到你拍了一張照片！這個景點很有特色呢！你想了解更多關於這個地方的故事嗎？' 
+        };
+        
+        setTimeout(() => {
+          setMessages(prevMsgs => [...prevMsgs, aiMessage]);
+          setIsTyping(false);
+          
+          // 更新會話
+          if (currentSession) {
+            currentSession.addMessage(aiMessage);
+            currentSession.save().catch(error => {
+              console.error('保存會話失敗:', error);
+            });
+          }
+        }, 1500);
+      }
+    } catch (error) {
+      console.error('拍照過程出錯:', error);
+      alert('拍照失敗，請重試');
     }
   };
   // 開啟相簿
   const openLibrary = async () => {
-    console.log('openLibrary called');
+    console.log('🎯 openLibrary called - 開始執行相簿選擇');
     setShowOptions(false);
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      alert('需要相簿權限');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync();
-    console.log('Library result:', result);
-    if (!result.canceled) {
-      console.log('相簿選擇:', result);
-      // 這裡可以處理照片，例如 setMessages([...])
+    
+    let permissionResult;
+    
+    try {
+      console.log('📋 正在檢查媒體庫權限...');
+      
+      // 檢查是否可以使用圖片庫
+      permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('📋 權限結果:', permissionResult);
+      
+      if (permissionResult.status !== 'granted') {
+        console.log('❌ 權限被拒絕:', permissionResult.status);
+        alert('需要相簿權限才能選擇照片\n請在設備設定中允許存取照片');
+        return;
+      }
+      
+      console.log('✅ 權限已獲得，啟動圖片選擇器...');
+      
+      // 針對 iOS limited 權限使用簡化的參數
+      if (permissionResult.accessPrivileges === 'limited') {
+        console.log('📱 檢測到 iOS limited 權限，使用相容參數');
+      }
+      
+      // 直接使用經過測試的有效參數組合
+      const result = await ImagePicker.launchImageLibraryAsync();
+      
+      console.log('📸 圖片選擇結果:', JSON.stringify(result, null, 2));
+      
+      if (result.canceled) {
+        console.log('🚫 用戶取消了選擇');
+        return;
+      }
+      
+      if (!result.assets || result.assets.length === 0) {
+        console.log('❌ 沒有選擇到任何圖片');
+        alert('沒有選擇到圖片，請重試');
+        return;
+      }
+      
+      const selectedAsset = result.assets[0];
+      console.log('✅ 選擇成功:', {
+        uri: selectedAsset.uri,
+        width: selectedAsset.width,
+        height: selectedAsset.height,
+        fileSize: selectedAsset.fileSize
+      });
+      
+      // 添加用戶上傳照片訊息到聊天
+      const userMessage = { 
+        id: Date.now(), 
+        from: 'user' as const, 
+        text: '我選了一張照片',
+        image: { uri: selectedAsset.uri }
+      };
+      
+      console.log('📤 正在添加用戶訊息到聊天...');
+      setMessages(prevMessages => [...prevMessages, userMessage]);
+      setIsTyping(true);
+      
+      // 更新會話
+      if (currentSession) {
+        currentSession.addMessage(userMessage);
+      }
+      
+      // AI 回應照片
+      const aiMessage = { 
+        id: Date.now() + 1, 
+        from: 'ai' as const, 
+        guideId: guide.id, 
+        text: '哇！這張照片很棒呢！讓我來為你介紹一下照片中可能包含的歷史故事和文化背景！' 
+      };
+      
+      console.log('🤖 準備 AI 回應...');
+      setTimeout(() => {
+        setMessages(prevMsgs => [...prevMsgs, aiMessage]);
+        setIsTyping(false);
+        
+        // 更新會話
+        if (currentSession) {
+          currentSession.addMessage(aiMessage);
+          currentSession.save().catch(error => {
+            console.error('保存會話失敗:', error);
+          });
+        }
+        console.log('✅ 圖片處理流程完成');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('❌ 選擇照片過程出錯:', error);
+      console.error('錯誤詳情:', error.message);
+      
+      // 簡化的錯誤處理
+      let errorMessage = `選擇照片失敗：${error.message}\n\n`;
+      
+      if (permissionResult?.accessPrivileges === 'limited') {
+        errorMessage += `檢測到 iOS 限制權限模式\n\n建議解決方案:\n1. 設定 → 隱私與安全性 → 照片 → 本應用\n2. 選擇「所有照片」替代「已選取的照片」\n3. 重啟應用後重試`;
+      } else {
+        errorMessage += `請檢查:\n• 設備是否有照片\n• 應用是否有相簿權限\n• 網路連線是否正常`;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -310,7 +583,14 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
         <TouchableOpacity style={styles.headerIcon} onPress={() => onNavigate && onNavigate('drawerNavigation')}>
           <Image source={require('../assets/icons/icon_menu.png')} style={styles.icon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{guide.name}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{guide.name}</Text>
+          {syncStatus !== 'disabled' && (
+            <Text style={[styles.syncStatus, getSyncStatusStyle(syncStatus)]}>
+              {getSyncStatusText(syncStatus)}
+            </Text>
+          )}
+        </View>
         <TouchableOpacity style={styles.headerIcon} onPress={handleEndChat}>
           <Image source={require('../assets/icons/icon_close.png')} style={styles.icon} />
         </TouchableOpacity>
@@ -332,7 +612,7 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
               {msg.from === 'ai' && (
                 <View style={styles.avatarWrapper}>
                   <Image
-                    source={GUIDE_IMAGES[msg.guideId] || GUIDE_IMAGES.kuron}
+                    source={GUIDE_IMAGES[msg.guideId || 'kuron'] || GUIDE_IMAGES.kuron}
                     style={styles.avatar}
                   />
                 </View>
@@ -341,6 +621,9 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
                 {msg.text ? (
                   <Text style={msg.from === 'user' ? styles.userText : styles.aiText}>{msg.text}</Text>
                 ) : null}
+                {msg.from === 'user' && msg.image && (
+                  <Image source={msg.image} style={styles.userImageCard} />
+                )}
                 {msg.miniCards && (
                   <View style={styles.miniCardsContainer}>
                     {msg.miniCards.map(card => (
@@ -446,7 +729,7 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
         {showScrollToBottom && (
           <TouchableOpacity
             style={styles.floatingDownArrow}
-            onPress={() => scrollViewRef.current.scrollToEnd({ animated: true })}
+            onPress={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             activeOpacity={0.7}
           >
             <Image source={require('../assets/icons/icon_arrow-down.png')} style={styles.floatingArrowIcon} />
@@ -523,8 +806,18 @@ const styles = StyleSheet.create({
   },
   headerIcon: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   icon: { width: 28, height: 28, resizeMode: 'contain' },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: {
     color: '#fff', fontSize: 22, fontWeight: 'bold', letterSpacing: 3,
+  },
+  syncStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
   },
   chatArea: {
     position: 'absolute',
@@ -561,6 +854,9 @@ const styles = StyleSheet.create({
   aiText: { color: '#fff', fontSize: 18, lineHeight: 26 },
   aiImageCard: {
     width: 180, height: 120, borderRadius: 16, marginTop: 8, alignSelf: 'flex-start',
+  },
+  userImageCard: {
+    width: 160, height: 120, borderRadius: 16, marginTop: 8, alignSelf: 'flex-end',
   },
   userBubble: {
     backgroundColor: '#eee', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 18,

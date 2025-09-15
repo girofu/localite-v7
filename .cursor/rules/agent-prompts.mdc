@@ -1,8 +1,6 @@
 ---
-description: 開發不同部件需要選擇不同 agent，並且根據此文件內容指導 agent 開發
-alwaysApply: false
+alwaysApply: true
 ---
-
 # 🤖 Agent Prompts 系統 - 完整指南
 
 ## 📋 Agent 系統總覽

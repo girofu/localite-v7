@@ -621,6 +621,11 @@ export class FirestoreService {
 
     const converted: any = {};
     for (const [key, value] of Object.entries(data)) {
+      // 🔥 修復：跳過 undefined 值，Firestore 不支援
+      if (value === undefined) {
+        continue;
+      }
+      
       if (value instanceof Date) {
         converted[key] = Timestamp.fromDate(value);
       } else if (typeof value === 'object' && value !== null) {

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { Stack } from 'expo-router';
 import { PersistenceService } from '../src/services/PersistenceService';
+import { logger, setupGlobalErrorHandler } from '../src/services/LoggingService';
+import { useAuth } from '../src/contexts/AuthContext';
 import HomeScreen from '../screens/HomeScreen';
-import LoginScreen from '../screens/Login';
-import SignupScreen from '../screens/Signup';
+import { HybridLoginScreen } from '../src/screens/auth/HybridLoginScreen';
+import { HybridRegisterScreen } from '../src/screens/auth/HybridRegisterScreen';
 import GuideActivationScreen from '../screens/GuideActivationScreen';
 import QRCodeScannerScreen from '../screens/QRCodeScannerScreen';
 import MapScreen from '../screens/MapScreen';
@@ -31,6 +33,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 type ScreenType = 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'learningSheetsList' | 'badge' | 'aboutLocalite' | 'news' | 'privacy' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation' | 'profile';
 
 export default function Index() {
+  const { user, loading: authLoading } = useAuth();
   const [screen, setScreen] = useState<ScreenType>('home');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [selectedGuide, setSelectedGuide] = useState<string>('kuron');
@@ -38,15 +41,39 @@ export default function Index() {
   const [showJourneyValidation, setShowJourneyValidation] = useState(false);
   const [showEndOptions, setShowEndOptions] = useState(false);
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+  // 使用 AuthContext 的 user 狀態而不是本地狀態
+  const isLoggedIn = !!user;
+
+  // 監聽認證狀態變化，登入成功後自動導航
+  useEffect(() => {
+    if (user && (screen === 'login' || screen === 'signup')) {
+      logger.info('用戶登入成功，自動導航', { userId: user.uid, currentScreen: screen });
+      
+      if (returnToChat) {
+        // 從聊天畫面來的登入，返回聊天
+        setReturnToChat(false);
+        setShowJourneyValidation(false);
+        setShowEndOptions(true);
+        setScreen('chat');
+      } else {
+        // 一般登入，返回首頁
+        setScreen('home');
+      }
+    }
+  }, [user, screen, returnToChat]);
 
   // 應用啟動時恢復狀態
   useEffect(() => {
     const restoreState = async () => {
       try {
+        logger.info('應用啟動 - 開始恢復狀態', { screen: 'App' });
+        
         const savedVoiceEnabled = await PersistenceService.getVoiceEnabled();
         setVoiceEnabled(savedVoiceEnabled);
+        
+        logger.info('語音設置已恢復', { voiceEnabled: savedVoiceEnabled });
 
         const savedNavigationState = await PersistenceService.getNavigationState();
         if (savedNavigationState) {
@@ -64,11 +91,24 @@ export default function Index() {
           }
         }
       } catch (error) {
+        logger.logError(error as Error, '恢復狀態失敗', { screen: 'App' });
         console.error('恢復狀態失敗:', error);
       }
     };
 
     restoreState();
+    setupGlobalErrorHandler();
+    
+    // 測試日誌連接並記錄啟動
+    setTimeout(() => {
+      logger.testConnection().then(connected => {
+        logger.info('應用啟動完成', { 
+          screen: 'App',
+          loggingConnected: connected,
+          timestamp: new Date().toISOString()
+        });
+      });
+    }, 1000);
   }, []);
 
   // 狀態改變時保存到持久化存儲
@@ -111,21 +151,9 @@ export default function Index() {
 
   const goBack = () => {
     if (navigationHistory.length > 0) {
-      let previousScreen = navigationHistory[navigationHistory.length - 1];
-      let historyIndex = navigationHistory.length - 1;
-      
-      while (previousScreen === 'drawerNavigation' && historyIndex > 0) {
-        historyIndex--;
-        previousScreen = navigationHistory[historyIndex];
-      }
-      
-      setNavigationHistory(prev => prev.slice(0, historyIndex));
-      
-      if (previousScreen !== 'drawerNavigation') {
-        setScreen(previousScreen as ScreenType);
-      } else {
-        setScreen('home');
-      }
+      const previousScreen = navigationHistory[navigationHistory.length - 1];
+      setNavigationHistory(prev => prev.slice(0, -1));
+      setScreen(previousScreen as ScreenType);
     } else {
       setScreen('home');
     }
@@ -155,7 +183,13 @@ export default function Index() {
       case 'miniCardPreview':
         return <MiniCardPreviewScreen onClose={() => setScreen('home')} />;
       case 'qr':
-        return <QRCodeScannerScreen onClose={() => navigateToScreen('guide')} />;
+        return (
+          <QRCodeScannerScreen 
+            onClose={() => navigateToScreen('guide')} 
+            setSelectedPlaceId={setSelectedPlaceId}
+            navigateToScreen={navigateToScreen}
+          />
+        );
       case 'chat':
         return (
           <ChatScreen
@@ -183,7 +217,7 @@ export default function Index() {
           <GuideSelectionScreen
             placeId={selectedPlaceId}
             onBack={() => setScreen('map')}
-            onConfirm={(guideId) => {
+            onConfirm={(guideId: string) => {
               setSelectedGuide(guideId);
               setShowEndOptions(false);
               navigateToScreen('chat');
@@ -274,14 +308,32 @@ export default function Index() {
             onNavigateToProfile={() => navigateToScreen('profile')}
             isLoggedIn={isLoggedIn}
             userAvatar={null}
-            userName="Dannypi"
+            userName={user?.email?.split('@')[0] || '訪客'}
             voiceEnabled={voiceEnabled}
             onVoiceToggle={setVoiceEnabled}
           />
         );
       case 'login':
         return (
-          <LoginScreen 
+          <HybridLoginScreen 
+            navigation={{ 
+              goBack: () => {
+                if (returnToChat) {
+                  setReturnToChat(false);
+                  setShowJourneyValidation(false);
+                  setShowEndOptions(true);
+                  navigateToScreen('chat');
+                } else {
+                  goBack();
+                }
+              },
+              navigate: (screen: string) => {
+                if (screen === 'Register') {
+                  navigateToScreen('signup');
+                }
+              }
+            }}
+            returnToChat={returnToChat}
             onClose={() => {
               if (returnToChat) {
                 setReturnToChat(false);
@@ -291,20 +343,29 @@ export default function Index() {
               } else {
                 goBack();
               }
-            }} 
-            onNavigateToSignup={() => navigateToScreen('signup')}
-            returnToChat={returnToChat}
-            showJourneyValidation={showJourneyValidation}
+            }}
           />
         );
       case 'signup':
-        return <SignupScreen onClose={goBack} onNavigateToLogin={() => navigateToScreen('login')} />;
+        return (
+          <HybridRegisterScreen 
+            navigation={{ 
+              navigate: (screen: string) => {
+                if (screen === 'Login') {
+                  navigateToScreen('login');
+                }
+              }, 
+              goBack 
+            }} 
+            onClose={goBack}
+          />
+        );
       case 'profile':
         return (
           <ProfileScreen 
             onBack={goBack}
             onLogout={() => {
-              setIsLoggedIn(false);
+              // 登出由 AuthContext 處理，不需要手動設定 isLoggedIn
               setScreen('home');
             }}
             onUpgradeSubscription={() => {

@@ -1,6 +1,5 @@
 ---
-description: 撰寫軟體時的指導原則
-alwaysApply: false
+alwaysApply: true
 ---
 ### Phase 2: TDD 開發循環
 

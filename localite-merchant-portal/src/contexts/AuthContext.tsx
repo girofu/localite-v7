@@ -31,24 +31,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isMerchant, setIsMerchant] = useState(false);
 
   const loadMerchantData = async (userId: string) => {
+    console.log('🔍 開始查詢商家資料，UID:', userId);
     try {
       const merchantDoc = await getDoc(doc(db, 'merchants', userId));
+      console.log('📄 商家文檔存在:', merchantDoc.exists());
+      
       if (merchantDoc.exists()) {
+        const rawData = merchantDoc.data();
+        console.log('📊 原始商家資料:', rawData);
+        
         const merchantData = {
           uid: merchantDoc.id,
-          ...merchantDoc.data()
+          ...rawData
         } as MerchantProfile;
+        
+        console.log('✅ 處理後的商家資料:', merchantData);
+        console.log('✅ 商家狀態:', merchantData.status);
         
         setMerchant(merchantData);
         setIsMerchant(true);
+        console.log('✅ 已設置 isMerchant = true');
         return merchantData;
       } else {
+        console.log('❌ 找不到商家文檔！');
+        console.log('🔍 查詢路徑: merchants/' + userId);
         setMerchant(null);
         setIsMerchant(false);
         return null;
       }
     } catch (error) {
-      console.error('載入商家資料失敗:', error);
+      console.error('❌ 載入商家資料失敗:', error);
+      console.error('❌ 錯誤詳細:', error instanceof Error ? error.message : String(error));
       setMerchant(null);
       setIsMerchant(false);
       return null;

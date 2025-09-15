@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Localite 日誌管理 Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .connection-status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: rgba(46, 213, 115, 0.2);
+            border: 1px solid #2ed573;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(255, 71, 87, 0.2);
+            border: 1px solid #ff4757;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem;
+            min-width: 60px;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 0.2rem;
+        }
+
+        .stat-item.error .stat-value { color: #ff4757; }
+        .stat-item.warn .stat-value { color: #ffa502; }
+        .stat-item.info .stat-value { color: #2ed573; }
+
+        .filters {
+            background: #2d3436;
+            padding: 1rem 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #636e72;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.5rem 1rem;
+            border: 1px solid #636e72;
+            border-radius: 6px;
+            background: #2d3436;
+            color: #ffffff;
+            font-size: 0.9rem;
+            min-width: 150px;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .test-btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .test-btn.info { background: #2ed573; color: white; }
+        .test-btn.warn { background: #ffa502; color: white; }
+        .test-btn.error { background: #ff4757; color: white; }
+
+        .clear-btn {
+            padding: 0.4rem 1rem;
+            background: #636e72;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .logs-container {
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+            padding: 1rem;
+            background: #2d3436;
+        }
+
+        .no-logs {
+            text-align: center;
+            padding: 3rem;
+            color: #636e72;
+            font-style: italic;
+        }
+
+        .log-entry {
+            background: #2d3436;
+            border: 1px solid #636e72;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            padding: 1rem;
+            transition: all 0.2s;
+        }
+
+        .log-entry:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 12px rgba(102, 126, 234, 0.1);
+        }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .log-level {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: white;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .log-timestamp {
+            color: #b2bec3;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .log-service {
+            color: #74b9ff;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: rgba(116, 185, 255, 0.1);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+        }
+
+        .log-message {
+            color: #ddd;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .log-details {
+            margin-top: 0.8rem;
+            background: #2d3436;
+            border: 1px solid #636e72;
+            border-radius: 4px;
+            padding: 1rem;
+        }
+
+        .log-details pre {
+            color: #a29bfe;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>🚀 Localite 日誌管理</h1>
+            <div class="connection-status disconnected" id="connectionStatus">
+                🔴 未連接
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-label">總計</span>
+                <span class="stat-value" id="totalLogs">0</span>
+            </div>
+            <div class="stat-item error">
+                <span class="stat-label">錯誤</span>
+                <span class="stat-value" id="errorLogs">0</span>
+            </div>
+            <div class="stat-item warn">
+                <span class="stat-label">警告</span>
+                <span class="stat-value" id="warnLogs">0</span>
+            </div>
+            <div class="stat-item info">
+                <span class="stat-label">資訊</span>
+                <span class="stat-value" id="infoLogs">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="filters">
+        <div class="filter-group">
+            <select id="levelFilter">
+                <option value="">所有級別</option>
+                <option value="error">錯誤</option>
+                <option value="warn">警告</option>
+                <option value="info">資訊</option>
+                <option value="debug">調試</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <input type="text" id="serviceFilter" placeholder="搜尋服務名稱...">
+        </div>
+
+        <div class="filter-group">
+            <input type="text" id="searchFilter" placeholder="搜尋日誌內容...">
+        </div>
+
+        <div class="test-buttons">
+            <button class="test-btn info" onclick="testLog('info')">測試 INFO</button>
+            <button class="test-btn warn" onclick="testLog('warn')">測試 WARN</button>
+            <button class="test-btn error" onclick="testLog('error')">測試 ERROR</button>
+        </div>
+
+        <button class="clear-btn" onclick="clearLogs()">清空日誌</button>
+    </div>
+
+    <div class="logs-container" id="logsContainer">
+        <div class="no-logs" id="noLogs">
+            <p>沒有匹配的日誌記錄</p>
+        </div>
+    </div>
+
+    <script>
+        // 連接到 Socket.IO 服務器
+        const socket = io('http://localhost:5001');
+        
+        // 日誌存儲
+        let logs = [];
+        let filteredLogs = [];
+
+        // DOM 元素
+        const connectionStatus = document.getElementById('connectionStatus');
+        const logsContainer = document.getElementById('logsContainer');
+        const noLogsMessage = document.getElementById('noLogs');
+        const levelFilter = document.getElementById('levelFilter');
+        const serviceFilter = document.getElementById('serviceFilter');
+        const searchFilter = document.getElementById('searchFilter');
+
+        // 統計元素
+        const totalLogsEl = document.getElementById('totalLogs');
+        const errorLogsEl = document.getElementById('errorLogs');
+        const warnLogsEl = document.getElementById('warnLogs');
+        const infoLogsEl = document.getElementById('infoLogs');
+
+        // Socket 連接事件
+        socket.on('connect', () => {
+            console.log('已連接到日誌服務器');
+            connectionStatus.textContent = '🟢 已連接';
+            connectionStatus.className = 'connection-status connected';
+        });
+
+        socket.on('disconnect', () => {
+            console.log('與日誌服務器斷開連接');
+            connectionStatus.textContent = '🔴 未連接';
+            connectionStatus.className = 'connection-status disconnected';
+        });
+
+        // 接收初始日誌
+        socket.on('initialLogs', (initialLogs) => {
+            logs = initialLogs || [];
+            updateStats();
+            filterAndRenderLogs();
+        });
+
+        // 接收新日誌
+        socket.on('newLog', (newLog) => {
+            logs.unshift(newLog);
+            if (logs.length > 1000) {
+                logs = logs.slice(0, 1000); // 保持最多 1000 條
+            }
+            updateStats();
+            filterAndRenderLogs();
+        });
+
+        // 更新統計
+        function updateStats() {
+            const stats = {
+                total: logs.length,
+                errors: logs.filter(log => log.level === 'error').length,
+                warns: logs.filter(log => log.level === 'warn').length,
+                infos: logs.filter(log => log.level === 'info').length
+            };
+
+            totalLogsEl.textContent = stats.total;
+            errorLogsEl.textContent = stats.errors;
+            warnLogsEl.textContent = stats.warns;
+            infoLogsEl.textContent = stats.infos;
+        }
+
+        // 過濾和渲染日誌
+        function filterAndRenderLogs() {
+            const levelValue = levelFilter.value;
+            const serviceValue = serviceFilter.value.toLowerCase();
+            const searchValue = searchFilter.value.toLowerCase();
+
+            filteredLogs = logs.filter(log => {
+                const levelMatch = !levelValue || log.level === levelValue;
+                const serviceMatch = !serviceValue || log.service.toLowerCase().includes(serviceValue);
+                const searchMatch = !searchValue || 
+                    log.message.toLowerCase().includes(searchValue) ||
+                    log.service.toLowerCase().includes(searchValue);
+                
+                return levelMatch && serviceMatch && searchMatch;
+            });
+
+            renderLogs();
+        }
+
+        // 渲染日誌
+        function renderLogs() {
+            if (filteredLogs.length === 0) {
+                logsContainer.innerHTML = '<div class="no-logs"><p>沒有匹配的日誌記錄</p></div>';
+                return;
+            }
+
+            const logsHtml = filteredLogs.map(log => {
+                const levelColor = getLevelColor(log.level);
+                const timestamp = formatTimestamp(log.timestamp);
+                
+                let detailsHtml = '';
+                if (log.details || log.metadata) {
+                    const details = log.details || log.metadata;
+                    detailsHtml = `
+                        <div class="log-details">
+                            <pre>${JSON.stringify(details, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="log-entry">
+                        <div class="log-header">
+                            <span class="log-level" style="background-color: ${levelColor}">
+                                ${log.level.toUpperCase()}
+                            </span>
+                            <span class="log-timestamp">${timestamp}</span>
+                            <span class="log-service">${log.service}</span>
+                        </div>
+                        <div class="log-message">${log.message}</div>
+                        ${detailsHtml}
+                    </div>
+                `;
+            }).join('');
+
+            logsContainer.innerHTML = logsHtml;
+            logsContainer.scrollTop = 0; // 滾動到最新日誌
+        }
+
+        // 獲取級別顏色
+        function getLevelColor(level) {
+            switch (level) {
+                case 'error': return '#ff4757';
+                case 'warn': return '#ffa502';
+                case 'info': return '#2ed573';
+                case 'debug': return '#5352ed';
+                default: return '#747d8c';
+            }
+        }
+
+        // 格式化時間戳
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp).toLocaleString('zh-TW');
+        }
+
+        // 測試日誌
+        function testLog(level) {
+            socket.emit('log', {
+                level,
+                message: `測試 ${level} 級別日誌 - ${new Date().toLocaleString()}`,
+                service: 'test-dashboard',
+                metadata: {
+                    testId: Math.random().toString(36).substring(7),
+                    browser: navigator.userAgent
+                }
+            });
+        }
+
+        // 清空日誌
+        function clearLogs() {
+            if (confirm('確定要清空所有日誌嗎？')) {
+                logs = [];
+                updateStats();
+                filterAndRenderLogs();
+            }
+        }
+
+        // 事件監聽器
+        levelFilter.addEventListener('change', filterAndRenderLogs);
+        serviceFilter.addEventListener('input', filterAndRenderLogs);
+        searchFilter.addEventListener('input', filterAndRenderLogs);
+
+        // 初始化
+        updateStats();
+        filterAndRenderLogs();
+    </script>
+</body>
+</html>

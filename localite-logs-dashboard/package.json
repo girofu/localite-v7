@@ -1,0 +1,55 @@
+{
+  "name": "localite-logs-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "獨立的日誌管理 Web 介面",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "client": "echo 'Using static HTML dashboard at http://localhost:5001'",
+    "build": "echo 'Static HTML build complete'",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^4.18.2",
+    "firebase": "^12.2.1",
+    "firebase-admin": "^12.0.0",
+    "socket.io": "^4.7.5",
+    "winston": "^3.11.0"
+  },
+  "overrides": {
+    "ajv": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
+    "supertest": "^6.3.4",
+    "typescript": "^4.9.5"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "proxy": "http://localhost:5001"
+}

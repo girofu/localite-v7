@@ -1,6 +1,5 @@
 ---
-description: 專案會使用到的常用 command 皆須依此文件中的方式執行
-alwaysApply: false
+alwaysApply: true
 ---
 ## 📋 終端機指令規範 (新增)
 
@@ -9,26 +8,41 @@ alwaysApply: false
 所有終端機操作必須遵循以下標準指令集：
 
 #### 專案初始化
+
 ```bash
 # 專案設置
-cd /Users/fuchangwei/Projects/localite-v6
+cd /Users/fuchangwei/Projects/localite-v7
 npm install                     # 安裝依賴
 npm run setup                   # 初始化設置
+
+# 多系統依賴安裝
+./start-systems.sh              # 安裝所有子系統依賴並啟動
 
 # 環境設置
 cp .env.example .env           # 建立環境檔
 cp .env .env.test              # 建立測試環境
 cp .env .env.development       # 建立開發環境
+cp .env .env.staging           # 建立測試環境
+cp .env .env.production        # 建立生產環境
+cp .env .env.ios              # iOS 專用環境變數
 ```
 
 #### TDD 開發循環指令
+
 ```bash
 # 紅色階段 - 寫測試
-npm run test:watch -- path/to/test.spec.ts    # 監聽模式運行特定測試
+npm run test:watch                            # 監聽模式運行所有測試
+npm run test:watch -- --testPathPattern=component  # 監聽特定組件測試
+npm run test -- --testNamePattern="should create"  # 運行特定測試
 
 # 綠色階段 - 實作功能
-npm run dev                                    # 啟動開發伺服器
-npm run test:unit -- --coverage               # 檢查單元測試覆蓋率
+npm run dev                                    # 啟動開發伺服器 (Expo)
+npm run start                                  # 啟動 Expo 應用
+npm run android                               # Android 模擬器
+npm run ios                                   # iOS 模擬器
+npm run web                                   # Web 版本
+npm run test -- --coverage                    # 運行測試並生成覆蓋率
+npm run type-check                            # TypeScript 類型檢查
 
 # 重構階段 - 優化程式碼
 npm run lint                                   # 檢查程式碼規範
@@ -37,43 +51,236 @@ npm run type-check                            # TypeScript 類型檢查
 ```
 
 #### 測試執行指令
+
 ```bash
 # 測試類型
 npm test                       # 執行所有測試
-npm run test:unit             # 只執行單元測試
-npm run test:integration      # 只執行整合測試
-npm run test:e2e              # 執行 E2E 測試
 npm run test:coverage         # 生成覆蓋率報告
+npm run test:watch            # 監聽模式運行測試
+npm run performance-test      # 效能測試
+npm run verify-api-keys       # API Keys 驗證
 
-# 特定測試
-npm test -- --testNamePattern="should create user"    # 執行特定測試
-npm test -- path/to/specific.test.ts                  # 執行特定檔案
+# 特定測試檔案
+npm test -- --testPathPattern=services     # 只執行服務測試
+npm test -- --testPathPattern=screens      # 只執行畫面測試
+npm test -- --testPathPattern=components   # 只執行組件測試
+npm test -- --testNamePattern="should create"    # 執行特定測試
+
+# 環境測試
+npm run pre-release-check     # 發佈前檢查
+npm run verify-api-keys .env.production     # 驗證生產環境 API Keys
+npm run verify-api-keys .env.staging        # 驗證測試環境 API Keys
 ```
 
 #### 建置與部署指令
-```bash
-# 建置
-npm run build                  # 生產環境建置
-npm run build:dev             # 開發環境建置
-npm run build:android         # Android APK 建置
-npm run build:ios             # iOS IPA 建置
 
-# 部署
-npm run deploy:staging        # 部署到測試環境
-npm run deploy:canary         # 金絲雀部署 (5%)
-npm run deploy:production     # 生產環境部署
+```bash
+# EAS 建置 (推薦)
+eas build --platform all --profile preview         # 預覽版建置 (iOS + Android)
+eas build --platform ios --profile preview         # iOS 預覽版建置
+eas build --platform android --profile preview     # Android 預覽版建置
+eas build --platform all --profile production      # 生產版建置
+eas build --platform ios --profile production      # iOS 生產版建置
+eas build --platform android --profile production  # Android 生產版建置
+
+# 應用商店提交
+eas submit --platform ios --profile production     # 提交 iOS 到 App Store
+eas submit --platform android --profile production # 提交 Android 到 Play Store
+eas submit --platform ios --profile preview        # 提交 iOS 測試版
+eas submit --platform android --profile preview    # 提交 Android 內部測試
+
+# 憑證管理
+eas credentials                                   # 管理建置憑證
+eas device:create                                 # 註冊測試裝置
+eas device:list                                   # 列出已註冊裝置
+
+# 傳統建置 (如果需要)
+npm run build                  # Web 版本建置
+npx expo prebuild -p ios       # iOS 原生專案預建置
+npx expo prebuild -p android   # Android 原生專案預建置
+
+# 部署準備檢查
+npm run pre-deploy-check       # 部署前完整檢查
+npm run staging:setup          # 設定測試環境
 ```
 
 #### Git 操作指令
+
 ```bash
 # 提交流程
 git add .                                      # 暫存所有變更
 git status                                     # 檢查狀態
 git diff --staged                             # 檢視暫存變更
-git commit -m "type: description" -m "details"  # 提交變更
+git commit -m "feat: add new feature" -m "Add user authentication flow"  # 提交變更
 
 # 分支管理
-git checkout -b feature/task-x-x              # 建立功能分支
-git push origin feature/task-x-x              # 推送分支
-git checkout main                             # 切換主分支
-git merge --no-ff feature/task-x-x            # 合併功能分支
+git checkout -b feature/auth-flow             # 建立功能分支
+git push origin feature/auth-flow            # 推送分支
+git checkout main                            # 切換主分支
+git merge --no-ff feature/auth-flow          # 合併功能分支
+
+# 標籤管理
+git tag -a v1.0.0 -m "Release version 1.0.0"  # 建立版本標籤
+git push origin --tags                       # 推送標籤
+```
+
+#### 多系統管理指令
+
+```bash
+# 全系統啟動
+./start-systems.sh                           # 啟動所有系統 (用戶、管理員、商家)
+npm run start                                # 啟動用戶系統 (Expo)
+cd localite-admin-dashboard && npm start     # 啟動管理員系統
+cd localite-merchant-portal && npm start     # 啟動商家系統
+
+# 子系統管理
+cd localite-app-stable && npm start          # 用戶 App
+cd localite-admin-dashboard && npm start     # 管理員後台 (port 3001)
+cd localite-merchant-portal && npm start     # 商家門戶 (port 3002)
+
+# 系統狀態檢查
+npx expo-doctor                              # Expo 專案診斷
+npm run pre-deploy-check                     # 部署前檢查
+npm run verify-api-keys                      # API Keys 驗證
+```
+
+#### iOS 開發環境指令
+
+```bash
+# Xcode 問題修復
+./scripts/fix-xcode.sh                       # 修復 Xcode 配置問題
+
+# iOS 環境設置
+./scripts/ios-setup.sh                       # 完整 iOS 開發環境設置
+npx expo prebuild -p ios --clean             # 清除並重新建置 iOS 專案
+
+# iOS 模擬器管理
+xcrun simctl list devices                    # 列出所有模擬器
+xcrun simctl boot "iPhone 15"                # 啟動特定模擬器
+xcrun simctl shutdown all                    # 關閉所有模擬器
+
+# 憑證和佈建檔案
+eas credentials                              # EAS 憑證管理
+eas device:create                            # 註冊測試裝置
+```
+
+#### 環境變數管理
+
+```bash
+# 環境切換
+cp .env.production .env                      # 切換到生產環境
+cp .env.staging .env                         # 切換到測試環境
+cp .env.development .env                     # 切換到開發環境
+cp .env.ios .env                             # 切換到 iOS 環境
+
+# API Keys 驗證
+npm run verify-api-keys .env.production      # 驗證生產環境
+npm run verify-api-keys .env.staging         # 驗證測試環境
+npm run verify-api-keys .env.development     # 驗證開發環境
+```
+
+#### 專案維護指令
+
+```bash
+# 程式碼品質
+npm run lint                                 # ESLint 檢查
+npm run lint:fix                             # 自動修復格式問題
+npm run type-check                           # TypeScript 類型檢查
+
+# 效能測試
+npm run performance-test                     # 效能基準測試
+
+# 清理和重置
+rm -rf node_modules && npm install           # 重新安裝依賴
+npx expo prebuild -p all --clean             # 清除原生專案並重新建置
+npx pod-install                              # iOS Pods 重新安裝 (iOS)
+```
+
+#### 日誌管理系統指令
+
+```bash
+# 日誌系統啟動與停止
+cd /Users/fuchangwei/Projects/localite-v7/localite-logs-dashboard
+npm start                                    # 啟動完整日誌管理系統
+node server/server.js                        # 單獨啟動後端服務器
+node server/server.js &                      # 背景啟動服務器
+pkill -f "server/server.js"                 # 停止日誌服務器
+pkill -9 -f "server/server.js"              # 強制停止服務器
+
+# 日誌系統狀態檢查
+curl -s http://localhost:5001/api/health     # 健康檢查與系統狀態
+lsof -i :5001                               # 檢查端口 5001 佔用情況
+ps aux | grep "server/server.js" | grep -v grep  # 檢查服務器進程狀態
+curl -s http://localhost:5001 > /dev/null && echo "✅ Dashboard 正常" || echo "❌ Dashboard 異常"
+
+# 日誌推送 API 指令
+curl -X POST http://localhost:5001/api/logs \
+  -H "Content-Type: application/json" \
+  -d '{"level": "info", "message": "測試訊息", "service": "test"}'  # 推送一般資訊日誌
+
+curl -X POST http://localhost:5001/api/logs \
+  -H "Content-Type: application/json" \
+  -d '{"level": "error", "message": "錯誤訊息", "service": "app", "metadata": {"error_code": "E001"}}'  # 推送錯誤日誌
+
+curl -X POST http://localhost:5001/api/logs \
+  -H "Content-Type: application/json" \
+  -d '{"level": "warn", "message": "警告訊息", "service": "auth", "metadata": {"screen": "RegisterScreen"}}'  # 推送警告日誌
+
+# 日誌查詢指令
+curl -s http://localhost:5001/api/logs                    # 查詢所有日誌
+curl -s "http://localhost:5001/api/logs?limit=50"         # 查詢最近 50 條日誌
+curl -s "http://localhost:5001/api/logs?level=error"      # 查詢錯誤日誌
+curl -s "http://localhost:5001/api/logs?level=warn"       # 查詢警告日誌
+curl -s "http://localhost:5001/api/logs?level=info"       # 查詢資訊日誌
+curl -s "http://localhost:5001/api/logs?service=localite-app"  # 查詢主應用日誌
+curl -s "http://localhost:5001/api/logs?service=auth"     # 查詢認證相關日誌
+
+# 複合查詢指令
+curl -s "http://localhost:5001/api/logs?level=error&limit=20"     # 查詢最近 20 條錯誤
+curl -s "http://localhost:5001/api/logs?level=warn&service=auth"  # 查詢認證警告日誌
+curl -s "http://localhost:5001/api/logs?service=register&limit=10" # 查詢註冊相關日誌
+
+# 日誌分析指令 (需要 jq)
+curl -s http://localhost:5001/api/logs | jq '.[0:5]'      # 格式化顯示最新 5 條
+curl -s http://localhost:5001/api/logs | jq '.[] | select(.level=="error")'  # 只顯示錯誤日誌
+curl -s http://localhost:5001/api/logs | jq '.[] | {level, message, service, timestamp}'  # 簡化顯示
+curl -s http://localhost:5001/api/logs | jq 'group_by(.service) | map({service: .[0].service, count: length})'  # 按服務統計
+
+# 日誌監控指令
+tail -f localite-logs-dashboard/server/logs/combined.log  # 監控所有日誌文件
+tail -f localite-logs-dashboard/server/logs/error.log     # 監控錯誤日誌文件
+watch -n 2 'curl -s http://localhost:5001/api/health | jq'  # 即時監控系統健康狀態
+
+# 日誌測試指令集
+curl -X POST http://localhost:5001/api/logs \
+  -H "Content-Type: application/json" \
+  -d '{"level": "info", "message": "系統啟動測試", "service": "startup-test"}'
+
+curl -X POST http://localhost:5001/api/logs \
+  -H "Content-Type: application/json" \
+  -d '{"level": "warn", "message": "註冊功能測試", "service": "auth-test", "metadata": {"screen": "RegisterScreen", "action": "button_click"}}'
+
+curl -X POST http://localhost:5001/api/logs \
+  -H "Content-Type: application/json" \
+  -d '{"level": "error", "message": "模擬應用錯誤", "service": "error-test", "metadata": {"error_code": "APP_ERROR", "component": "RegisterScreen"}}'
+
+# 日誌系統標準化清理 (推薦)
+./scripts/logs-system-cleanup.sh            # 執行完整的系統清理和驗證流程
+./scripts/logs-system-cleanup.sh --quick    # 快速清理模式
+
+# 日誌系統故障排除 (手動方式)
+lsof -i :5001 | grep LISTEN                 # 檢查端口監聽狀態
+pkill -9 -f ":5001"                         # 強制釋放端口
+netstat -an | grep 5001                      # 檢查端口網路狀態
+cd localite-logs-dashboard && rm -rf node_modules && npm install  # 重新安裝依賴
+
+# 日誌文件管理
+ls -la localite-logs-dashboard/server/logs/               # 查看日誌文件
+du -h localite-logs-dashboard/server/logs/                # 查看日誌文件大小
+cat localite-logs-dashboard/server/logs/error.log | tail -20      # 查看最近錯誤
+rm -rf localite-logs-dashboard/server/logs/*.log          # 清空所有日誌文件
+
+# 應用日誌整合檢查
+cd localite-app-stable && grep -r "logger\." src/         # 查看已整合的日誌點
+cd localite-app-stable && grep -r "LoggingService" src/   # 查看日誌服務使用情況
+```

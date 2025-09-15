@@ -2,7 +2,7 @@
  * 用戶管理頁面
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -36,7 +36,7 @@ import {
   Search,
 } from '@mui/icons-material';
 import { AdminService } from '../services/AdminService';
-import { User, AdminRole } from '../types/admin.types';
+import { User } from '../types/admin.types';
 import { useAuth } from '../contexts/AuthContext';
 
 const UsersPage: React.FC = () => {
@@ -51,11 +51,7 @@ const UsersPage: React.FC = () => {
 
   const adminService = AdminService.getInstance();
 
-  useEffect(() => {
-    loadUsers();
-  }, [searchText, roleFilter]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       const usersList = await adminService.getUsers(searchText, roleFilter);
@@ -67,7 +63,11 @@ const UsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchText, roleFilter, adminService]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
@@ -88,27 +88,17 @@ const UsersPage: React.FC = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: AdminRole) => {
-    try {
-      await adminService.updateUserRole(userId, newRole);
-      await loadUsers();
-    } catch (error) {
-      console.error('更新用戶角色失敗:', error);
-      setError('更新用戶角色失敗');
-    }
-  };
-
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string): 'primary' | 'secondary' | 'success' | 'warning' | 'error' => {
     const colorMap: { [key: string]: 'primary' | 'secondary' | 'success' | 'warning' | 'error' } = {
       'super_admin': 'error',
       'user_manager': 'warning',
       'merchant_manager': 'success',
       'analyst': 'primary',
       'auditor': 'secondary',
-      'tourist': 'default',
+      'tourist': 'secondary',
       'merchant': 'success'
     };
-    return colorMap[role] || 'default';
+    return colorMap[role] || 'primary';
   };
 
   const getRoleText = (role: string) => {
@@ -222,7 +212,7 @@ const UsersPage: React.FC = () => {
                     <TableCell>
                       <Chip
                         label={getRoleText(user.role)}
-                        color={getRoleColor(user.role) as any}
+                        color={getRoleColor(user.role)}
                         size="small"
                       />
                     </TableCell>

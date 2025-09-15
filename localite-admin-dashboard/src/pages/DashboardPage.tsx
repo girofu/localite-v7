@@ -2,9 +2,8 @@
  * 管理員儀表板頁面
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Grid,
   Paper,
   Typography,
   Box,
@@ -20,6 +19,7 @@ import {
   ListItemIcon,
   Divider,
 } from '@mui/material';
+import { Grid } from '@mui/material';
 import {
   People,
   Business,
@@ -43,11 +43,7 @@ const DashboardPage: React.FC = () => {
 
   const adminService = AdminService.getInstance();
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const systemStats = await adminService.getSystemStats();
       setStats(systemStats);
@@ -56,7 +52,11 @@ const DashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [adminService]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const StatCard: React.FC<{
     title: string;
@@ -168,7 +168,7 @@ const DashboardPage: React.FC = () => {
         核心指標
       </Typography>
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <StatCard
             title="總用戶數"
             value={stats?.users.total || 0}
@@ -178,7 +178,7 @@ const DashboardPage: React.FC = () => {
             onClick={() => permissions?.canViewUsers && navigate('/users')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <StatCard
             title="總商家數"
             value={stats?.merchants.total || 0}
@@ -188,7 +188,7 @@ const DashboardPage: React.FC = () => {
             onClick={() => permissions?.canViewMerchants && navigate('/merchants')}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <StatCard
             title="今日新增"
             value={stats?.users.newToday || 0}
@@ -197,7 +197,7 @@ const DashboardPage: React.FC = () => {
             color="#FF9800"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <StatCard
             title="待審核"
             value={stats?.merchants.pending || 0}
@@ -211,12 +211,12 @@ const DashboardPage: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* 快速操作 */}
-        <Grid item xs={12} md={8}>
+        <Grid xs={12} md={8}>
           <Typography variant="h5" gutterBottom>
             快速操作
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <QuickActionCard
                 title="用戶管理"
                 description="查看和管理所有用戶帳號"
@@ -226,7 +226,7 @@ const DashboardPage: React.FC = () => {
                 disabled={!permissions?.canViewUsers}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <QuickActionCard
                 title="商家管理"
                 description="審核和管理商家申請"
@@ -236,7 +236,7 @@ const DashboardPage: React.FC = () => {
                 disabled={!permissions?.canViewMerchants}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <QuickActionCard
                 title="系統分析"
                 description="查看系統使用統計和分析"
@@ -246,7 +246,7 @@ const DashboardPage: React.FC = () => {
                 disabled={!permissions?.canViewAnalytics}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid xs={12} sm={6}>
               <QuickActionCard
                 title="系統設定"
                 description="配置系統參數和設定"
@@ -260,7 +260,7 @@ const DashboardPage: React.FC = () => {
         </Grid>
 
         {/* 系統狀態 */}
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Typography variant="h5" gutterBottom>
             系統狀態
           </Typography>

@@ -1,0 +1,84 @@
+{
+  "timestamp": "2025-09-13T16:08:26.087Z",
+  "results": {
+    "startup": {
+      "error": "Command failed: npx react-native start --reset-cache\nnode:internal/modules/cjs/loader:1404\n  throw err;\n  ^\n\nError: Cannot find module './package.json'\nRequire stack:\n- /Users/fuchangwei/Projects/localite-v7/localite-app-merged/node_modules/.bin/react-native\n    at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)\n    at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)\n    at Function._load (node:internal/modules/cjs/loader:1211:37)\n    at TracingChannel.traceSync (node:diagnostics_channel:322:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)\n    at Module.require (node:internal/modules/cjs/loader:1487:12)\n    at require (node:internal/modules/helpers:135:16)\n    at Object.<anonymous> (/Users/fuchangwei/Projects/localite-v7/localite-app-merged/node_modules/.bin/react-native:13:41)\n    at Module._compile (node:internal/modules/cjs/loader:1730:14) {\n  code: 'MODULE_NOT_FOUND',\n  requireStack: [\n    '/Users/fuchangwei/Projects/localite-v7/localite-app-merged/node_modules/.bin/react-native'\n  ]\n}\n\nNode.js v22.17.1\n"
+    },
+    "services": {
+      "APIService": 135,
+      "FirestoreService": 226,
+      "GoogleAIService": 55,
+      "GoogleTTSService": 66,
+      "total": 482
+    },
+    "api": {
+      "chat_message": {
+        "endpoint": "/api/chat",
+        "responseTime": 406,
+        "status": "success"
+      },
+      "place_search": {
+        "endpoint": "/api/places/search",
+        "responseTime": 434,
+        "status": "success"
+      },
+      "image_analysis": {
+        "endpoint": "/api/analyze",
+        "responseTime": 327,
+        "status": "success"
+      },
+      "route_planning": {
+        "endpoint": "/api/route",
+        "responseTime": 161,
+        "status": "success"
+      },
+      "averageResponseTime": 332
+    },
+    "rendering": {
+      "initial_render": {
+        "description": "初始畫面渲染",
+        "renderTime": 67,
+        "fps": 15
+      },
+      "chat_screen": {
+        "description": "聊天畫面渲染",
+        "renderTime": 76,
+        "fps": 13
+      },
+      "map_screen": {
+        "description": "地圖畫面渲染",
+        "renderTime": 26,
+        "fps": 38
+      },
+      "list_rendering": {
+        "description": "列表渲染",
+        "renderTime": 54,
+        "fps": 18
+      },
+      "averageRenderTime": 56,
+      "averageFps": 18
+    },
+    "memory": {
+      "rss": 39,
+      "heapUsed": 4,
+      "heapTotal": 5,
+      "external": 2,
+      "unit": "MB",
+      "analysis": "記憶體使用率較高"
+    },
+    "bundle": {
+      "dependencies": 41,
+      "devDependencies": 18,
+      "estimatedSize": 2410,
+      "sizeUnit": "KB",
+      "analysis": "依賴數量較多"
+    }
+  },
+  "recommendations": [
+    {
+      "category": "Bundle 優化",
+      "priority": "medium",
+      "suggestion": "依賴數量較多，考慮移除未使用的依賴"
+    }
+  ]
+}

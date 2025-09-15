@@ -2,7 +2,7 @@
  * 認證上下文 - 管理員系統
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { AdminRole, AdminPermissions } from '../types/admin.types';
@@ -31,32 +31,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
   const [permissions, setPermissions] = useState<AdminPermissions | null>(null);
 
-  const checkAdminRole = async (): Promise<boolean> => {
+  const checkAdminRole = useCallback(async (): Promise<boolean> => {
     if (!user) return false;
 
     try {
-      const idTokenResult = await user.getIdTokenResult();
-      const claims = idTokenResult.claims;
+      console.log('🔍 檢查管理員權限，UID:', user.uid);
+      
+      // 改為查詢 Firestore admins collection
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('../firebase/config');
+      
+      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+      console.log('📄 管理員文檔存在:', adminDoc.exists());
+      
+      if (adminDoc.exists()) {
+        const adminData = adminDoc.data();
+        console.log('📊 管理員資料:', adminData);
+        
+        const isAdminUser = adminData.isAdmin === true;
+        const role = adminData.role as AdminRole;
+        
+        console.log('✅ 管理員狀態:', isAdminUser);
+        console.log('✅ 管理員角色:', role);
 
-      const isAdminUser = claims.admin === true;
-      const role = claims.role as AdminRole;
+        setIsAdmin(isAdminUser);
+        setAdminRole(role);
 
-      setIsAdmin(isAdminUser);
-      setAdminRole(role);
-
-      if (isAdminUser && role) {
-        // 根據角色設定權限
-        const rolePermissions = mapRoleToPermissions(role);
-        setPermissions(rolePermissions);
-        return true;
+        if (isAdminUser && role) {
+          // 根據角色設定權限
+          const rolePermissions = mapRoleToPermissions(role);
+          setPermissions(rolePermissions);
+          console.log('✅ 權限設置完成:', rolePermissions);
+          return true;
+        }
+      } else {
+        console.log('❌ 找不到管理員文檔！');
+        console.log('🔍 查詢路徑: admins/' + user.uid);
       }
 
+      setIsAdmin(false);
+      setAdminRole(null);
+      setPermissions(null);
       return false;
     } catch (error) {
-      console.error('檢查管理員角色失敗:', error);
+      console.error('❌ 檢查管理員角色失敗:', error);
+      console.error('❌ 錯誤詳細:', error instanceof Error ? error.message : String(error));
+      setIsAdmin(false);
+      setAdminRole(null);
+      setPermissions(null);
       return false;
     }
-  };
+  }, [user]);
 
   const mapRoleToPermissions = (role: AdminRole): AdminPermissions => {
     switch (role) {
@@ -166,7 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [checkAdminRole]);
 
   const value = {
     user,

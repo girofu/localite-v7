@@ -1,0 +1,249 @@
+export interface Badge {
+  id: string;
+  type: string;
+  name: string;
+  englishName: string;
+  description: string;
+  badgeImage: string;
+  shareImage: string;
+  displayType: 'modal' | 'chat';
+  condition: string;
+  trigger: string;
+}
+
+export const BADGES: Badge[] = [
+  // 成長里程碑
+  {
+    id: 'B2-1',
+    type: '成長里程碑',
+    name: '綠芽初登場',
+    englishName: 'babyron',
+    description: '首次成功登入，你已解鎖「綠芽」限定導覽員，獲得「綠芽初登場」徽章',
+    badgeImage: 'B2-1',
+    shareImage: 'B2-1-share',
+    displayType: 'modal',
+    condition: '首次註冊成功',
+    trigger: '首次登入/註冊後',
+  },
+  {
+    id: 'B2-2',
+    type: '成長里程碑',
+    name: '探索者1號',
+    englishName: 'map',
+    description: '完成3次導覽，獲得「探索者1號」徽章',
+    badgeImage: 'B2-2',
+    shareImage: 'B2-2-share',
+    displayType: 'modal',
+    condition: '不限時間完成任意3個導覽點',
+    trigger: '生成完成3份導覽遊記後',
+  },
+  {
+    id: 'B2-3',
+    type: '成長里程碑',
+    name: '探索者2號',
+    englishName: 'maginifer',
+    description: '完成5次導覽，獲得「探索者2號」徽章',
+    badgeImage: 'B2-3',
+    shareImage: 'B2-3-share',
+    displayType: 'modal',
+    condition: '不限時間完成任意5個導覽點',
+    trigger: '生成完成5份導覽遊記後',
+  },
+  {
+    id: 'B2-4',
+    type: '成長里程碑',
+    name: '探索者3號',
+    englishName: 'compass',
+    description: '完成10次導覽，獲得「探索者3號」徽章',
+    badgeImage: 'B2-4',
+    shareImage: 'B2-4-share',
+    displayType: 'modal',
+    condition: '不限時間完成任意10個導覽點',
+    trigger: '生成完成10份導覽遊記後',
+  },
+  {
+    id: 'B2-5',
+    type: '成長里程碑',
+    name: '時光旅人',
+    englishName: 'mobile',
+    description: '連續2個月造訪3個地點，獲得「時光旅人」徽章',
+    badgeImage: 'B2-5',
+    shareImage: 'B2-5-share',
+    displayType: 'modal',
+    condition: '連續兩個月分別造訪3個以上導覽點',
+    trigger: '完成獲得條件並生成導覽遊記後',
+  },
+
+  // 任務成就
+  {
+    id: 'B3-1',
+    type: '任務成就',
+    name: '手冊',
+    englishName: 'booklet',
+    description: '完成第1則問答測驗，獲得「手冊」✨',
+    badgeImage: 'B3-1',
+    shareImage: 'B3-1-share',
+    displayType: 'chat',
+    condition: '完成第1題導覽知識問答或互動測驗',
+    trigger: '在完成第1題問答或互動測驗後，在導覽對話內',
+  },
+  {
+    id: 'B3-2',
+    type: '任務成就',
+    name: '羽毛筆',
+    englishName: 'quile',
+    description: '累計完成5則問答測驗，獲得「羽毛筆」✨',
+    badgeImage: 'B3-2',
+    shareImage: 'B3-2-share',
+    displayType: 'chat',
+    condition: '完成第5題導覽知識問答或互動測驗',
+    trigger: '在完成第5題問答或互動測驗後，在導覽對話內',
+  },
+  {
+    id: 'B3-3',
+    type: '任務成就',
+    name: '墨水',
+    englishName: 'ink',
+    description: '累計完成10則問答測驗，獲得「墨水」✨',
+    badgeImage: 'B3-3',
+    shareImage: 'B3-3-share',
+    displayType: 'chat',
+    condition: '完成第10題導覽知識問答或互動測驗',
+    trigger: '在完成第10題問答或互動測驗後，在導覽對話內',
+  },
+
+  // 探索成就
+  {
+    id: 'B4-1',
+    type: '探索成就',
+    name: '忠寮在地通',
+    englishName: 'Stamp1',
+    description: '你已完成忠寮社區的所有導覽點，成功獲得「忠寮在地通」徽章',
+    badgeImage: 'B4-1',
+    shareImage: 'B4-1-share',
+    displayType: 'modal',
+    condition: '完成忠寮社區的所有導覽點',
+    trigger: '完成忠寮社區的所有導覽點後，在最後一個地點按下結束導覽',
+  },
+
+  // 社群分享成就
+  {
+    id: 'B5-1',
+    type: '社群分享成就',
+    name: '傳遞者',
+    englishName: 'messenger',
+    description: '你已成功分享了 1 次旅程，成功獲得「傳遞者」徽章',
+    badgeImage: 'B5-1',
+    shareImage: 'B5-1-share',
+    displayType: 'modal',
+    condition: '首次分享遊記',
+    trigger: '首次分享遊記後',
+  },
+  {
+    id: 'B5-2',
+    type: '社群分享成就',
+    name: '郵務士',
+    englishName: 'postman',
+    description: '你已成功分享了5 次旅程，成功獲得「郵務士」徽章',
+    badgeImage: 'B5-2',
+    shareImage: 'B5-2-share',
+    displayType: 'modal',
+    condition: '分享遊記5次',
+    trigger: '分享遊記5次後',
+  },
+  {
+    id: 'B5-3',
+    type: '社群分享成就',
+    name: '捕星人',
+    englishName: 'star-retriever',
+    description: '你已成功分享了10 次旅程，成功獲得「捕星人」徽章',
+    badgeImage: 'B5-3',
+    shareImage: 'B5-3-share',
+    displayType: 'modal',
+    condition: '分享遊記10次',
+    trigger: '分享遊記10次後',
+  },
+
+  // 特別活動限定
+  {
+    id: 'B6-1',
+    type: '特別活動限定',
+    name: '月兔初登場',
+    englishName: 'moony',
+    description: '中秋節快樂！你已解鎖「月兔」，獲得「月兔初登場」徽章',
+    badgeImage: 'B6-1',
+    shareImage: 'B6-1-share',
+    displayType: 'modal',
+    condition: '2025/10/1-10/31 中秋節登入Localite',
+    trigger: '2025/10/1-10/31期間 首次登入/註冊後',
+  },
+  {
+    id: 'B6-2',
+    type: '特別活動限定',
+    name: '聖誕初登場',
+    englishName: 'santa',
+    description: '聖誕節快樂！你已解鎖「聖誕」，獲得「聖誕初登場」徽章',
+    badgeImage: 'B6-2',
+    shareImage: 'B6-2-share',
+    displayType: 'modal',
+    condition: '2025/12/1-12/31 聖誕節登入Localite',
+    trigger: '2025/12/1-12/31期間 首次登入/註冊後',
+  },
+  {
+    id: 'B6-3',
+    type: '特別活動限定',
+    name: '午馬初登場',
+    englishName: 'horsei',
+    description: '農曆新年快樂！你已解鎖「午馬」，獲得「午馬初登場」徽章',
+    badgeImage: 'B6-3',
+    shareImage: 'B6-3-share',
+    displayType: 'modal',
+    condition: '2026/2/1-2/28 農曆年登入Localite',
+    trigger: '2026/2/1-2/28 首次登入/註冊後',
+  },
+
+  // 特別地點限定
+  {
+    id: 'B7-1',
+    type: '特別地點限定',
+    name: '忠忠初登場',
+    englishName: 'piglet',
+    description: '你已解鎖「小豬忠忠」限定導覽員，獲得「忠忠初登場」徽章',
+    badgeImage: 'B7-1',
+    shareImage: 'B7-1-share',
+    displayType: 'modal',
+    condition: '首次探索忠寮任一地點',
+    trigger: '生成完成忠寮社區的任一導覽點遊記後',
+  },
+];
+
+// 根據類型分組的徽章
+export const BADGES_BY_TYPE = {
+  '成長里程碑': BADGES.filter(badge => badge.type === '成長里程碑'),
+  '任務成就': BADGES.filter(badge => badge.type === '任務成就'),
+  '探索成就': BADGES.filter(badge => badge.type === '探索成就'),
+  '社群分享成就': BADGES.filter(badge => badge.type === '社群分享成就'),
+  '特別活動限定': BADGES.filter(badge => badge.type === '特別活動限定'),
+  '特別地點限定': BADGES.filter(badge => badge.type === '特別地點限定'),
+};
+
+// 根據顯示類型分組的徽章
+export const BADGES_BY_DISPLAY_TYPE = {
+  modal: BADGES.filter(badge => badge.displayType === 'modal'),
+  chat: BADGES.filter(badge => badge.displayType === 'chat'),
+};
+
+// 根據 ID 查找徽章的輔助函數
+export const getBadgeById = (id: string): Badge | undefined => {
+  return BADGES.find(badge => badge.id === id);
+};
+
+// 根據類型查找徽章的輔助函數
+export const getBadgesByType = (type: string): Badge[] => {
+  return BADGES.filter(badge => badge.type === type);
+};
+
+// 根據顯示類型查找徽章的輔助函數
+export const getBadgesByDisplayType = (displayType: 'modal' | 'chat'): Badge[] => {
+  return BADGES.filter(badge => badge.displayType === displayType);
+};

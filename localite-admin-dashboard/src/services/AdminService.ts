@@ -8,12 +8,10 @@ import {
   getDocs, 
   getDoc, 
   updateDoc, 
-  deleteDoc, 
   query, 
   where, 
   orderBy, 
   limit, 
-  startAfter,
   getCountFromServer,
   Timestamp 
 } from 'firebase/firestore';

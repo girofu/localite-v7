@@ -1,0 +1,16 @@
+{
+  "name": "localite-seed-scripts",
+  "version": "1.0.0",
+  "description": "Localite 種子數據腳本",
+  "main": "create-seed-accounts.js",
+  "scripts": {
+    "seed": "node create-seed-accounts.js",
+    "clean": "node clean-seed-data.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

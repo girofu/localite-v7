@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Localite-App",
-    "slug": "localite-app",
+    "name": "Localite AI Guide",
+    "slug": "localite-ai-guide",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "localite-app",
+    "scheme": "localite-ai-guide",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -64,7 +64,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "48260140-7233-42af-b7ca-4ae2e6c0b1ff"
+        "projectId": "44f1e023-b909-4ffc-a5a6-da5ed0ebd599"
       }
     },
     "owner": "cwfu"
