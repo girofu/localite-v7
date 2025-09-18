@@ -4,11 +4,54 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { AuthProvider } from '../src/contexts/AuthContext';
+import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { logger } from '../src/services/LoggingService';
+import { DeepLinkHandler } from '../src/services/DeepLinkHandler';
+
+// 內部組件，處理深度連結
+function AppContent() {
+  const { handleEmailVerificationLink } = useAuth();
+  const deepLinkHandler = useRef<DeepLinkHandler | null>(null);
+
+  useEffect(() => {
+    // 初始化深度連結處理器
+    deepLinkHandler.current = new DeepLinkHandler({
+      onEmailVerificationLink: async (url: string) => {
+        try {
+          logger.info('收到郵件驗證連結', { url });
+          const result = await handleEmailVerificationLink(url);
+          if (result.success) {
+            logger.info('郵件驗證連結處理成功');
+          } else {
+            logger.warn('郵件驗證連結處理失敗', { error: result.error });
+          }
+        } catch (error) {
+          logger.logError(error as Error, 'AppContent.handleEmailVerificationLink');
+        }
+      },
+      onOtherLink: async (url: string) => {
+        logger.info('收到其他深度連結', { url });
+        // 可以在這裡處理其他類型的深度連結
+      }
+    });
+
+    deepLinkHandler.current.initialize();
+
+    return () => {
+      deepLinkHandler.current?.cleanup();
+    };
+  }, [handleEmailVerificationLink]);
+
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -57,10 +100,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <AuthProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
+          <AppContent />
           <StatusBar style="auto" />
         </ThemeProvider>
       </AuthProvider>

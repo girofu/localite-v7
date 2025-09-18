@@ -1,35 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  TouchableOpacity, 
+import React, { useState, ReactElement } from 'react';
+import {
+  View,
+  Text,
+  SafeAreaView,
+  StyleSheet,
+  TouchableOpacity,
   Image,
   ScrollView,
-  Modal
+  Modal,
 } from 'react-native';
-import { FirestoreService } from '../src/services/FirestoreService';
-import { useAuth } from '../src/contexts/AuthContext';
-import { SavedJourneyRecord } from '../src/types/journey.types';
+import { useJourney } from '../contexts/JourneyContext';
+import { ScreenType } from '../src/types/navigation.types';
 
 interface JourneyMainScreenProps {
   onClose: () => void;
-  onNavigate: (screen: 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'learningSheetsList' | 'badge' | 'aboutLocalite' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation') => void;
-  newJourneyId?: string;
+  onNavigate: (screen: ScreenType, params?: any) => void;
+  isLoggedIn?: boolean;
+  verificationState?: string;
 }
 
-export default function JourneyMainScreen({ onClose, onNavigate, newJourneyId }: JourneyMainScreenProps) {
+export default function JourneyMainScreen({ 
+  onClose, 
+  onNavigate,
+  isLoggedIn = false,
+  verificationState = 'pending_verification'
+}: JourneyMainScreenProps) {
+  
+  const { getJourneyRecordsByDate, hasJourneyRecord, deleteJourneyRecord, loading, error, refreshJourneyRecords, journeyRecords } = useJourney();
+  
+  // 日曆相關狀態
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [journeyRecords, setJourneyRecords] = useState<SavedJourneyRecord[]>([]);
-  const [loadingJourneys, setLoadingJourneys] = useState(false);
-  const [showNewJourneyHighlight, setShowNewJourneyHighlight] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   
-  const { user } = useAuth();
-  const [firestoreService] = useState(() => new FirestoreService());
+  const isVerified = verificationState === 'verified';
   
+  // 日曆相關常量和函數
   const currentYear = selectedDate.getFullYear();
   const currentMonth = selectedDate.getMonth();
   const currentDay = selectedDate.getDate();
@@ -41,70 +48,28 @@ export default function JourneyMainScreen({ onClose, onNavigate, newJourneyId }:
   
   const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
 
-  // 載入用戶的旅程記錄
-  useEffect(() => {
-    loadJourneyRecords();
-  }, [user]);
-
-  // 處理新旅程高亮顯示
-  useEffect(() => {
-    if (newJourneyId) {
-      setShowNewJourneyHighlight(true);
-      // 3秒後移除高亮
-      const timer = setTimeout(() => {
-        setShowNewJourneyHighlight(false);
-      }, 3000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [newJourneyId]);
-
-  const loadJourneyRecords = async () => {
-    if (!user?.uid) {
-      setJourneyRecords([]);
-      return;
-    }
-
-    try {
-      setLoadingJourneys(true);
-      const records = await firestoreService.getUserJourneyRecords(user.uid, { limit: 50 });
-      setJourneyRecords(records);
-      console.log('✅ 載入旅程記錄成功:', records.length);
-    } catch (error) {
-      console.error('❌ 載入旅程記錄失敗:', error);
-      setJourneyRecords([]);
-    } finally {
-      setLoadingJourneys(false);
-    }
+  // 格式化日期為 YYYY-MM-DD
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
-  // 獲取指定日期的旅程記錄
-  const getJourneysForDate = (date: Date) => {
-    return journeyRecords.filter(journey => {
-      const journeyDate = new Date(journey.createdAt);
-      return journeyDate.getFullYear() === date.getFullYear() &&
-             journeyDate.getMonth() === date.getMonth() &&
-             journeyDate.getDate() === date.getDate();
-    });
-  };
-
-  // 檢查指定日期是否有旅程記錄
-  const hasJourneysOnDate = (date: Date) => {
-    return getJourneysForDate(date).length > 0;
-  };
-
-  // 檢查是否為新建立的旅程記錄日期
-  const isNewJourneyDate = (date: Date) => {
-    if (!newJourneyId) return false;
-    
-    const newJourney = journeyRecords.find(j => j.id === newJourneyId);
-    if (!newJourney) return false;
-    
-    const journeyDate = new Date(newJourney.createdAt);
-    return journeyDate.getFullYear() === date.getFullYear() &&
-           journeyDate.getMonth() === date.getMonth() &&
-           journeyDate.getDate() === date.getDate();
-  };
+  // 獲取選定日期的旅程記錄
+  const selectedDateString = formatDate(selectedDate);
+  const selectedDateJourneys = getJourneyRecordsByDate(selectedDateString);
+  
+  // 調試資訊
+  console.log('📅 JourneyMainScreen state:', {
+    selectedDate: selectedDate.toISOString(),
+    selectedDateString,
+    totalJourneyRecords: journeyRecords?.length || 0,
+    selectedDateJourneys: selectedDateJourneys?.length || 0,
+    loading,
+    error,
+    isVerified
+  });
 
   // 生成當前月份的日期
   const generateMonthDates = () => {
@@ -162,107 +127,42 @@ export default function JourneyMainScreen({ onClose, onNavigate, newJourneyId }:
     setShowYearPicker(false);
   };
 
-  // 渲染旅程記錄
-  const renderJourneyRecords = () => {
-    if (loadingJourneys) {
-      return (
-        <View style={styles.explorationBox}>
-          <Text style={styles.noRecordText}>載入中...</Text>
-        </View>
-      );
-    }
-
-    const dateJourneys = getJourneysForDate(selectedDate);
-    
-    if (dateJourneys.length === 0) {
-      return (
-        <View style={styles.explorationBox}>
-          <Text style={styles.noRecordText}>本日無旅程記錄</Text>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.journeyListContainer}>
-        {dateJourneys.map((journey, index) => (
-          <TouchableOpacity
-            key={journey.id}
-            style={[
-              styles.journeyCard,
-              journey.id === newJourneyId && showNewJourneyHighlight && styles.newJourneyCard
-            ]}
-            onPress={() => onNavigate('journeyDetail', { journeyId: journey.id })}
-          >
-            <View style={styles.journeyHeader}>
-              <Text style={styles.journeyTitle}>{journey.title}</Text>
-              <Text style={styles.journeyTime}>
-                {new Date(journey.createdAt).toLocaleTimeString('zh-TW', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </Text>
-            </View>
-            <Text style={styles.journeyPlace}>{journey.placeName} · {journey.guideName}</Text>
-            <Text style={styles.journeySummary} numberOfLines={2}>
-              {journey.summary}
-            </Text>
-            <View style={styles.journeyFooter}>
-              <Text style={styles.conversationCount}>
-                對話 {journey.conversationCount} 次
-              </Text>
-              {journey.highlights && journey.highlights.length > 0 && (
-                <View style={styles.highlightsContainer}>
-                  {journey.highlights.slice(0, 2).map((highlight, idx) => (
-                    <View key={idx} style={styles.highlightTag}>
-                      <Text style={styles.highlightText}>{highlight}</Text>
-                    </View>
-                  ))}
-                  {journey.highlights.length > 2 && (
-                    <Text style={styles.moreHighlights}>+{journey.highlights.length - 2}</Text>
-                  )}
-                </View>
-              )}
-            </View>
-            {journey.id === newJourneyId && showNewJourneyHighlight && (
-              <View style={styles.newJourneyBadge}>
-                <Text style={styles.newJourneyBadgeText}>新</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
-
-  const renderCalendar = () => {
-    const rows: React.ReactNode[] = [];
-    let currentRow: React.ReactNode[] = [];
+  const renderCalendar = (): ReactElement[] => {
+    const rows: ReactElement[] = [];
+    let currentRow: ReactElement[] = [];
     
     monthDates.forEach((date, index) => {
+      const isCurrentMonth = selectedDate.getMonth() === currentMonth;
+      const isCurrentYear = selectedDate.getFullYear() === currentYear;
+      const isToday = isCurrentMonth && isCurrentYear && date === currentDay;
+      const isSelected = selectedDate.getDate() === date;
+      
+      // 檢查該日期是否有旅程記錄
+      let hasJourney = false;
+      if (date !== null && isCurrentMonth && isCurrentYear) {
+        const checkDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), date);
+        hasJourney = hasJourneyRecord(formatDate(checkDate));
+      }
+      
       currentRow.push(
         <View key={index} style={styles.calendarCell}>
           {date !== null ? (
             <TouchableOpacity
               style={[
                 styles.dateButton,
-                date === currentDay && styles.todayDate,
-                selectedDate.getDate() === date && styles.selectedDate,
-                hasJourneysOnDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), date)) && styles.hasJourneyDate,
-                isNewJourneyDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), date)) && showNewJourneyHighlight && styles.newJourneyDate
+                isToday && styles.todayDate,
+                isSelected && styles.selectedDate,
+                hasJourney && styles.journeyDate
               ]}
               onPress={() => handleDateSelect(date)}
             >
               <Text style={[
                 styles.dateText,
-                date === currentDay && styles.todayDateText,
-                selectedDate.getDate() === date && styles.selectedDateText,
-                hasJourneysOnDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), date)) && styles.hasJourneyDateText
+                isToday && styles.todayDateText,
+                isSelected && styles.selectedDateText
               ]}>
                 {date}
               </Text>
-              {hasJourneysOnDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), date)) && (
-                <View style={styles.journeyIndicator} />
-              )}
             </TouchableOpacity>
           ) : (
             <View style={styles.emptyCell} />
@@ -287,59 +187,251 @@ export default function JourneyMainScreen({ onClose, onNavigate, newJourneyId }:
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton} onPress={() => onNavigate('drawerNavigation')}>
-          <Image source={require('../assets/icons/icon_menu.png')} style={styles.headerIcon} />
+        <TouchableOpacity 
+          style={styles.menuButton} 
+          onPress={() => {
+            console.log('漢堡圖示被點擊');
+            onNavigate('drawerNavigation');
+          }}
+        >
+          <Image source={require('../assets/icons/icon_menu.png')} style={styles.menuIcon} />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>旅程紀錄</Text>
         <TouchableOpacity style={styles.backButton} onPress={onClose}>
-          <Image source={require('../assets/icons/icon_left.png')} style={styles.headerIcon} />
+          <Image source={require('../assets/icons/icon_angle-left.png')} style={styles.backIcon} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Calendar Title */}
-        <View style={styles.calendarTitleContainer}>
-          <TouchableOpacity 
-            style={styles.yearSelector}
-            onPress={() => setShowYearPicker(true)}
-          >
-            <Text style={styles.yearText}>{currentYear}</Text>
-            <Text style={styles.chevronText}>⌵</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.monthSelector}
-            onPress={() => setShowMonthPicker(true)}
-          >
-            <Text style={styles.monthText}>{months[currentMonth]}</Text>
-            <Text style={styles.chevronText}>⌵</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Calendar */}
-        <View style={styles.calendarContainer}>
-          {/* Week Days Header */}
-          <View style={styles.weekDaysHeader}>
-            {weekDays.map((day, index) => (
-              <View key={index} style={styles.weekDayCell}>
-                <Text style={styles.weekDayText}>{day}</Text>
-              </View>
-            ))}
+      {!isLoggedIn ? (
+        // 未登入狀態
+        <View style={styles.contentContainer}>
+          {/* Lock Icon */}
+          <View style={styles.lockIconContainer}>
+            <Image 
+              source={require('../assets/icons/icon_lockman.png')} 
+              style={styles.lockIcon}
+              resizeMode="contain"
+            />
           </View>
           
-          {/* Calendar Grid */}
-          <View style={styles.calendarGrid}>
-            {renderCalendar()}
+          {/* Login Message */}
+          <View style={styles.messageContainer}>
+            <View style={styles.messageRow}>
+              <Image source={require('../assets/icons/icon_sparkles.png')} style={styles.sparklesIcon} />
+              <Text style={styles.loginMessage}>登入 Localite 帳號查看你的旅程</Text>
+            </View>
+          </View>
+          
+          {/* Call to Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={styles.loginButton}
+              onPress={() => onNavigate('login')}
+            >
+              <Text style={styles.loginButtonText}>登入</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.exploreButton}
+              onPress={() => onNavigate('guide')}
+            >
+              <Text style={styles.exploreButtonText}>探索更多地點</Text>
+            </TouchableOpacity>
           </View>
         </View>
-
-        {/* Selected Date Journey Records */}
-        <View style={styles.explorationSection}>
-          <Text style={styles.explorationTitle}>
-            {selectedDate.getDate() === currentDay ? '本日' : `${selectedDate.getMonth() + 1}/${selectedDate.getDate()}`}探索地點
-          </Text>
-          {renderJourneyRecords()}
+      ) : !isVerified ? (
+        // 已登入但未驗證狀態
+        <View style={styles.contentContainer}>
+          {/* Verification Required Icon */}
+          <View style={styles.lockIconContainer}>
+            <Image 
+              source={require('../assets/icons/icon_lockman.png')} 
+              style={styles.lockIcon}
+              resizeMode="contain"
+            />
+          </View>
+          
+          {/* Verification Message */}
+          <View style={styles.messageContainer}>
+            <View style={styles.messageRow}>
+              <Image source={require('../assets/icons/icon_sparkles.png')} style={styles.sparklesIcon} />
+              <Text style={styles.verificationMessage}>請驗證您的信箱以查看旅程紀錄</Text>
+            </View>
+            <Text style={styles.verificationSubMessage}>
+              驗證後即可儲存和查看您的專屬旅程
+            </Text>
+          </View>
+          
+          {/* Call to Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={styles.verificationButton}
+              onPress={() => onNavigate('profile')}
+            >
+              <Text style={styles.verificationButtonText}>前往驗證</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.exploreButton}
+              onPress={() => onNavigate('guide')}
+            >
+              <Text style={styles.exploreButtonText}>探索更多地點</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
+      ) : (
+        // 已登入且已驗證狀態 - 顯示完整日曆和旅程內容
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          {/* 錯誤狀態 */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>載入失敗: {error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={refreshJourneyRecords}
+              >
+                <Text style={styles.retryButtonText}>重試</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
+          {/* 載入指示器 */}
+          {loading && !error && (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>載入旅程記錄中...</Text>
+            </View>
+          )}
+          {/* Calendar Title */}
+          <View style={styles.calendarTitleContainer}>
+            <TouchableOpacity 
+              style={styles.yearSelector}
+              onPress={() => setShowYearPicker(true)}
+            >
+              <Text style={styles.yearText}>{currentYear}</Text>
+              <Text style={styles.chevronText}>⌵</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.monthSelector}
+              onPress={() => setShowMonthPicker(true)}
+            >
+              <Text style={styles.monthText}>{months[currentMonth]}</Text>
+              <Text style={styles.chevronText}>⌵</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Calendar */}
+          <View style={styles.calendarContainer}>
+            {/* Week Days Header */}
+            <View style={styles.weekDaysHeader}>
+              {weekDays.map((day, index) => (
+                <View key={index} style={styles.weekDayCell}>
+                  <Text style={styles.weekDayText}>{day}</Text>
+                </View>
+              ))}
+            </View>
+            
+            {/* Calendar Grid */}
+            <View style={styles.calendarGrid}>
+              {renderCalendar()}
+            </View>
+          </View>
+
+        {/* Today's Exploration Locations */}
+        <View style={styles.explorationSection}>
+          <View style={styles.explorationTitleContainer}>
+            <Text style={styles.explorationTitle}>本日探索地點</Text>
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={() => setEditMode(!editMode)}
+            >
+              <Image source={require('../assets/icons/icon_filedit.png')} style={styles.editIcon} />
+              <Text style={styles.editText}>編輯</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Debug 訊息已移除 - 功能穩定後不再需要 */}
+          {loading ? (
+            <View style={styles.explorationBox}>
+              <Text style={styles.noRecordText}>正在載入旅程記錄...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.explorationBox}>
+              <Text style={[styles.noRecordText, { color: '#ff6b6b' }]}>載入失敗：{error}</Text>
+              <TouchableOpacity 
+                style={styles.exploreMoreButton}
+                onPress={refreshJourneyRecords}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.exploreMoreButtonText}>重試</Text>
+              </TouchableOpacity>
+            </View>
+          ) : selectedDateJourneys.length > 0 ? (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.journeyCardsContainer}
+              contentContainerStyle={styles.journeyCardsContent}
+            >
+                {selectedDateJourneys.map((journey: any, index: number) => (
+                  <View key={journey.id} style={styles.journeyCardWrapper}>
+                    <TouchableOpacity
+                      style={styles.journeyCard}
+                      onPress={() => !editMode && onNavigate('journeyDetail', journey)}
+                    >
+                      <Image 
+                        source={journey.photos[0] ? { uri: journey.photos[0] } : require('../assets/places/shinfang.png')} 
+                        style={styles.journeyCardImage} 
+                      />
+                      <Text style={styles.journeyCardTitle}>{journey.title}</Text>
+                      <View style={styles.timeRangeContainer}>
+                        <Image source={require('../assets/icons/icon_clock.png')} style={styles.clockIcon} />
+                        <Text style={styles.timeRangeText}>
+                          {journey.timeRange.start}-{journey.timeRange.end}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    {editMode && (
+                      <View style={styles.editControls}>
+                        <TouchableOpacity 
+                          style={styles.keepButton}
+                          onPress={() => setEditMode(false)}
+                        >
+                          <Text style={styles.keepButtonText}>✓</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.deleteButton}
+                          onPress={async () => {
+                            try {
+                              await deleteJourneyRecord(journey.id);
+                            } catch (error) {
+                              console.error('刪除旅程記錄失敗:', error);
+                            }
+                          }}
+                        >
+                          <Text style={styles.deleteButtonText}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.explorationBox}>
+                <Text style={styles.noRecordText}>本日無旅程記錄</Text>
+                <TouchableOpacity 
+                  style={styles.exploreMoreButton}
+                  onPress={() => onNavigate('guide')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.exploreMoreButtonText}>探索更多地點</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+        </ScrollView>
+      )}
+      
       {/* Year Picker Modal */}
       <Modal
         visible={showYearPicker}
@@ -428,20 +520,159 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
+  headerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    zIndex: -1,
+  },
   menuButton: {
     padding: 8,
+  },
+  menuIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#FFFFFF',
   },
   backButton: {
     padding: 8,
   },
-  headerIcon: {
-    width: 32,
-    height: 32,
+  backIcon: {
+    width: 24,
+    height: 24,
     tintColor: '#FFFFFF',
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  lockIconContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  lockIcon: {
+    width: 120,
+    height: 120,
+  },
+  messageContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sparklesIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+    tintColor: '#10B981',
+  },
+  loginMessage: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  verificationMessage: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  verificationSubMessage: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: 16,
+  },
+  loginButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  verificationButton: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  verificationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  exploreButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#6B7280',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  exploreButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
   },
   scrollContainer: {
     flex: 1,
   },
+  // 錯誤和載入狀態樣式
+  errorContainer: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 67, 54, 0.3)',
+  },
+  errorText: {
+    color: '#F44336',
+    fontSize: 14,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#F44336',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignSelf: 'center',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    margin: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  // Calendar 相關樣式
   calendarTitleContainer: {
     flexDirection: 'column',
     justifyContent: 'center',
@@ -517,6 +748,9 @@ const styles = StyleSheet.create({
   selectedDate: {
     backgroundColor: '#FFD700', // 黃色背景表示選中
   },
+  journeyDate: {
+    backgroundColor: '#FFC5C5', // 淺粉色背景表示有旅程記錄
+  },
   dateText: {
     color: '#FFFFFF',
     fontSize: 16,
@@ -539,12 +773,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: 'center',
   },
+  explorationTitleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+  },
   explorationTitle: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  editIcon: {
+    width: 16,
+    height: 16,
+    tintColor: '#FFFFFF',
+    marginRight: 4,
+  },
+  editText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   explorationBox: {
     width: '100%',
@@ -561,6 +820,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  exploreMoreButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+  },
+  exploreMoreButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -594,127 +868,109 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
-  // 旅程記錄相關樣式
-  hasJourneyDate: {
-    backgroundColor: '#4A90E2',
-    borderColor: '#4A90E2',
+  // Journey Cards Styles
+  journeyCardsContainer: {
+    width: '100%',
   },
-  hasJourneyDateText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  journeyCardsContent: {
+    paddingHorizontal: 16,
+    paddingRight: 32, // 增加右側間距，讓最後一張卡片也能完整顯示
   },
-  newJourneyDate: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
-    elevation: 4,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-  },
-  journeyIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 6,
-    height: 6,
-    backgroundColor: '#00FF88',
-    borderRadius: 3,
-  },
-  journeyListContainer: {
-    gap: 12,
+  journeyCardWrapper: {
+    position: 'relative',
+    marginRight: 16,
+    marginTop: 20,
+    marginBottom: 20,
   },
   journeyCard: {
-    backgroundColor: '#3A3A3A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    position: 'relative',
-  },
-  newJourneyCard: {
-    backgroundColor: '#4A4A2A',
-    borderColor: '#FFD700',
-    borderWidth: 2,
-    elevation: 4,
-    shadowColor: '#FFD700',
+    width: 200,
+    height: 200,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 0,
+    overflow: 'hidden',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 3,
   },
-  journeyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  journeyTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 8,
-  },
-  journeyTime: {
-    color: '#CCCCCC',
-    fontSize: 12,
-  },
-  journeyPlace: {
-    color: '#4A90E2',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  journeySummary: {
-    color: '#CCCCCC',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  journeyFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  conversationCount: {
-    color: '#999999',
-    fontSize: 12,
-  },
-  highlightsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  highlightTag: {
-    backgroundColor: '#4A90E2',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  highlightText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '500',
-  },
-  moreHighlights: {
-    color: '#999999',
-    fontSize: 10,
-    alignSelf: 'center',
-  },
-  newJourneyBadge: {
+  editControls: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#FFD700',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  keepButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  newJourneyBadgeText: {
-    color: '#000000',
-    fontSize: 10,
+  keepButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: 'bold',
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F44336',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  journeyCardImage: {
+    width: '100%',
+    height: 120,
+    resizeMode: 'cover',
+  },
+  journeyCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#232323',
+    marginTop: 12,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+  },
+  timeRangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginLeft: 12,
+    marginBottom: 20, // 增加底部間距
+  },
+  clockIcon: {
+    width: 14,
+    height: 14,
+    tintColor: '#FFFFFF',
+    marginRight: 6,
+  },
+  timeRangeText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

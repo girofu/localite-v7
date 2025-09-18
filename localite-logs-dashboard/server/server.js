@@ -9,6 +9,7 @@ const cors = require("cors");
 const winston = require("winston");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const FirestoreLogService = require("./services/FirestoreLogService");
 
 const app = express();
@@ -273,7 +274,30 @@ setTimeout(async () => {
 
 const PORT = process.env.PORT || 5001;
 
-server.listen(PORT, () => {
-  console.log(`🚀 日誌管理服務器運行在 http://localhost:${PORT}`);
-  logger.info("日誌管理服務器已啟動", { port: PORT });
+// 動態獲取服務器 IP 地址
+function getServerIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "localhost";
+}
+
+const HOST = process.env.HOST || "0.0.0.0";
+const SERVER_IP = getServerIP();
+
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 日誌管理服務器運行在:`);
+  console.log(`   - 本地訪問: http://localhost:${PORT}`);
+  console.log(`   - 網路訪問: http://${SERVER_IP}:${PORT}`);
+  console.log(`   - 所有接口: http://${HOST}:${PORT}`);
+  logger.info("日誌管理服務器已啟動", {
+    port: PORT,
+    host: HOST,
+    serverIP: SERVER_IP,
+  });
 });

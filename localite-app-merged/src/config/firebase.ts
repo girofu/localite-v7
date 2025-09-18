@@ -7,7 +7,8 @@ import { initializeApp, FirebaseApp } from 'firebase/app';
 import { 
   initializeAuth, 
   getAuth, 
-  Auth
+  Auth,
+  getReactNativePersistence
 } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
@@ -32,13 +33,15 @@ let storage: FirebaseStorage;
 try {
   firebaseApp = initializeApp(firebaseConfig);
   
-  // 初始化 Auth - Firebase v10 會自動處理 React Native 持久化
+  // 初始化 Auth 並配置 AsyncStorage 持久化
   if (process.env.NODE_ENV === 'test') {
     // 測試環境使用基本配置避免AsyncStorage依賴
     auth = getAuth(firebaseApp);
   } else {
-    // 生產環境，Firebase v10+ 會自動檢測 React Native 環境並使用適當的持久化
-    auth = getAuth(firebaseApp);
+    // 生產環境，明確配置 AsyncStorage 持久化
+    auth = initializeAuth(firebaseApp, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
   }
   
   firestore = getFirestore(firebaseApp);

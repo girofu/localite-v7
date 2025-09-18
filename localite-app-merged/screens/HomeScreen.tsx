@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, Image, ImageBackground, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, ImageBackground, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import LoginValidationModal from '../components/LoginValidationModal';
+import { useAuth } from '../src/contexts/AuthContext';
 
 interface HomeScreenProps {
   onStart?: () => void;
@@ -11,15 +12,19 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ onStart, onNavigateToLogin, onNavigateToGuideActivation, isLoggedIn = false }: HomeScreenProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  // 🟢 Green：使用驗證狀態來判斷用戶權限
+  const { verificationState, canAccessFeature } = useAuth();
 
   const handleStartButton = () => {
-    if (isLoggedIn) {
-      // 如果用戶已登入，直接進入導覽
+    // 🔧 修改：讓待認證用戶也能使用基本功能
+    if (verificationState === 'verified' || verificationState === 'pending_verification') {
+      // 已驗證和待認證用戶都可以開始探索
       if (onNavigateToGuideActivation) {
         onNavigateToGuideActivation();
       }
     } else {
-      // 如果用戶未登入，顯示登入驗證 modal
+      // 未登入用戶顯示登入 modal
       setShowLoginModal(true);
     }
   };
@@ -53,14 +58,12 @@ export default function HomeScreen({ onStart, onNavigateToLogin, onNavigateToGui
             <View style={styles.buttonGlow} />
             <TouchableOpacity style={styles.button} activeOpacity={0.8} onPress={handleStartButton}>
               <Text style={styles.buttonText}>
-                {isLoggedIn ? '開始探索' : '現在就開始探索'}
+                {verificationState === 'verified' || verificationState === 'pending_verification'
+                  ? '開始探索' 
+                  : '現在就開始探索'}
               </Text>
             </TouchableOpacity>
           </View>
-          
-
-          
-
         </View>
       </View>
 

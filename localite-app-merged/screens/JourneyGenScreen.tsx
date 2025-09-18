@@ -12,10 +12,11 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { ScreenType } from '../src/types/navigation.types';
 
 interface JourneyGenScreenProps {
   onClose: () => void;
-  onNavigate: (screen: string, data?: any) => void;
+  onNavigate: (screen: ScreenType, data?: any) => void;
   placeName?: string;
   source?: 'chatEnd' | 'chat' | null;
 }

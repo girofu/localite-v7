@@ -16,6 +16,7 @@ import { useUpdate } from '../contexts/UpdateContext';
 
 interface DrawerNavigationProps {
   onClose?: () => void;
+  onBack?: () => void; // 新增：返回上一頁的回調函數
   onNavigateToLogin?: () => void;
   onNavigateToRegister?: () => void;
   onNavigateToJourneyMain?: () => void;
@@ -33,6 +34,7 @@ interface DrawerNavigationProps {
 
 export default function DrawerNavigation({
   onClose,
+  onBack,
   onNavigateToLogin,
   onNavigateToRegister,
   onNavigateToJourneyMain,
@@ -137,10 +139,16 @@ export default function DrawerNavigation({
           <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={handleClose}>
-                <Image source={require('../assets/icons/icon_left.png')} style={styles.backIcon} />
+              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                <Image source={require('../assets/icons/icon_close.png')} style={styles.closeIcon} />
               </TouchableOpacity>
               <Text style={styles.title}>Localite AI</Text>
+              <TouchableOpacity 
+                style={styles.backButton} 
+                onPress={() => onBack && onBack()}
+              >
+                <Image source={require('../assets/icons/icon_left.png')} style={styles.backIcon} />
+              </TouchableOpacity>
             </View>
 
             {/* Menu Items */}
@@ -300,12 +308,27 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 20,
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
+  closeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#FFFFFF',
+  },
   backButton: {
-    marginRight: 16,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backIcon: {
     width: 24,
@@ -316,9 +339,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: 'bold',
-    flex: 1,
     textAlign: 'center',
-    marginRight: 40, // 平衡左邊的返回按鈕
   },
   menuContainer: {
     flex: 1,

@@ -23,6 +23,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "需要相機權限以拍照或掃描",
         "NSPhotoLibraryUsageDescription": "需要相簿權限以選擇照片",
+        "NSPhotoLibraryAddUsageDescription": "需要相簿權限以儲存照片",
         "UIBackgroundModes": [
           "remote-notification"
         ]
@@ -56,6 +57,14 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "允許 $(PRODUCT_NAME) 存取您的相片以讓您分享給朋友。",
+          "cameraPermission": "允許 $(PRODUCT_NAME) 存取您的相機以拍攝照片。",
+          "microphonePermission": "允許 $(PRODUCT_NAME) 存取您的麥克風。"
         }
       ]
     ],

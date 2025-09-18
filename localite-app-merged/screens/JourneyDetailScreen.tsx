@@ -14,12 +14,13 @@ import {
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { useJourney, JourneyRecord } from '../contexts/JourneyContext';
+import { ScreenType } from '../src/types/navigation.types';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 interface JourneyDetailScreenProps {
   onClose: () => void;
-  onNavigate: (screen: string, params?: any) => void;
+  onNavigate: (screen: ScreenType, params?: any) => void;
   journeyData?: {
     title: string;
     photos: string[];
@@ -27,34 +28,44 @@ interface JourneyDetailScreenProps {
     placeName: string;
     generatedContent: string;
   };
+  journeyId?: string;
   onSaveJourney?: () => void;
 }
 
-export default function JourneyDetailScreen({ onClose, onNavigate, journeyData, onSaveJourney }: JourneyDetailScreenProps) {
+export default function JourneyDetailScreen({ onClose, onNavigate, journeyData, journeyId, onSaveJourney }: JourneyDetailScreenProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const { addJourneyRecord, startTime, endTime } = useJourney();
-  // 使用傳入的數據或預設值
-  const [selectedWeather, setSelectedWeather] = useState(journeyData?.weather || 'sun');
+  const { addJourneyRecord, startTime, endTime, getJourneyRecordById } = useJourney();
+  
+  // 從 Context 獲取儲存的旅程記錄（如果有 journeyId）
+  const savedJourney = journeyId ? getJourneyRecordById(journeyId) : null;
+  
+  // 決定使用哪個數據源
+  const currentJourneyData = savedJourney || journeyData;
+  
+  // 判斷這是否為已保存的旅程（從 JourneyMainScreen 來的 Firestore 數據）
+  const isFromFirestore = !journeyId && journeyData && !savedJourney;
+  // 使用真實數據或合理的預設值
+  const [selectedWeather, setSelectedWeather] = useState(currentJourneyData?.weather || 'sun');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const shareCardRefs = useRef<(View | null)[]>([]);
   const [journeyContent, setJourneyContent] = useState(
-    journeyData?.generatedContent || '走近新芳春茶行，首先探索大門門聯，細品「芳春」對聯的茶鄉淵源。接著走進大廳，聆聽新芳春茶行的歷史故事，見證這座融中西風格的古蹟。最後，參觀一樓帳房，了解當年茶葉交易的細節，並選購了自己喜愛的茶具，感受時光流轉中的茶商風華。今日輕鬆穿梭近百年古蹟，進行了一場知性與趣味兼具的茶行導覽之旅。'
+    currentJourneyData?.generatedContent || '請選擇一個已保存的旅程記錄，或從旅程生成頁面進入以查看內容。'
   );
 
-  // 使用傳入的照片數據或預設照片
-  const photos = journeyData?.photos && journeyData.photos.length > 0 
-    ? journeyData.photos.map(uri => ({ uri }))
+  // 使用真實照片數據或提供預設照片（僅在沒有數據時）
+  const photos = currentJourneyData?.photos && currentJourneyData.photos.length > 0 
+    ? currentJourneyData.photos.map(uri => ({ uri }))
     : [
         require('../assets/places/shinfang.jpg'),
         require('../assets/places/lee_maison_de_Tamsui.jpg'),
         require('../assets/places/lee_swallow_de_Tamsui.jpg'),
       ];
 
-  // 使用傳入的標題或預設標題
-  const placeTitle = journeyData?.title || journeyData?.placeName || '新芳春茶行';
+  // 使用真實標題或預設標題
+  const placeTitle = currentJourneyData?.title || currentJourneyData?.placeName || '未命名旅程';
 
   // 獲取當天日期
   const getCurrentDate = () => {
@@ -171,6 +182,12 @@ export default function JourneyDetailScreen({ onClose, onNavigate, journeyData, 
   };
 
   const handleSaveJourney = () => {
+    // 如果已經是保存的旅程（有 journeyId 或從 Firestore 來的），則直接返回
+    if (savedJourney || isFromFirestore) {
+      onNavigate('journeyMain', { fromJourneyDetail: true });
+      return;
+    }
+
     // 格式化時間戳
     const formatTime = (date: Date | null) => {
       if (!date) return '09:23'; // 預設時間
@@ -338,8 +355,17 @@ export default function JourneyDetailScreen({ onClose, onNavigate, journeyData, 
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.navButton} onPress={handleSaveJourney}>
-          <View style={styles.saveIconContainer}>
-            <Image source={require('../assets/icons/icon_save.png')} style={styles.saveIcon} />
+          <View style={[
+            styles.saveIconContainer, 
+            (savedJourney || isFromFirestore) && styles.savedIconContainer
+          ]}>
+            <Image 
+              source={require('../assets/icons/icon_save.png')}
+              style={[
+                styles.saveIcon, 
+                (savedJourney || isFromFirestore) && styles.savedIcon
+              ]} 
+            />
           </View>
         </TouchableOpacity>
       </View>
@@ -615,9 +641,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  savedIconContainer: {
+    backgroundColor: 'rgba(74, 144, 226, 0.8)',
+  },
   saveIcon: {
     width: 16,
     height: 16,
+    tintColor: '#FFFFFF',
+  },
+  savedIcon: {
     tintColor: '#FFFFFF',
   },
   // Modal Styles

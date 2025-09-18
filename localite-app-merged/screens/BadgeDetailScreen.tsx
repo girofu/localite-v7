@@ -30,6 +30,26 @@ export default function BadgeDetailScreen({ onClose, onNavigate, badge, isLogged
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const shareCardRef = useRef<ViewShot>(null);
 
+  // 如果 badge 為空或無效，顯示錯誤狀態
+  if (!badge || !badge.id) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+        </View>
+
+        <View style={styles.contentContainer}>
+          <Text style={styles.errorText}>徽章信息載入失敗</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onClose}
+          >
+            <Text style={styles.backButtonText}>返回</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   // 根據 badge ID 動態載入對應的分享圖片
   const getBadgeShareImage = (badgeId: string) => {
     const shareImageMap: { [key: string]: any } = {
@@ -304,6 +324,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#2F2F2F',
   },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    backgroundColor: '#4B5563',
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    width: '100%',
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -328,9 +369,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: 'center',
-  },
-  backButton: {
-    padding: 8,
   },
   closeIcon: {
     width: 24,

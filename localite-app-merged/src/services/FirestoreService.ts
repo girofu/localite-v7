@@ -22,6 +22,7 @@ import {
   Timestamp,
   GeoPoint,
   Firestore,
+  increment,
 } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
 import {
@@ -76,7 +77,11 @@ export class FirestoreService {
       this.mockCollections.set('places', new Map());
       this.mockCollections.set('conversations', new Map());
       this.mockCollections.set('photos', new Map());
-      this.mockCollections.set('journeys', new Map());
+      this.mockCollections.set('journeys', new Map()); // 保留舊格式以支援遷移測試
+      
+      // 新增：為測試環境初始化子集合 mock 結構
+      // 格式：user-{userId}-journeys -> Map<journeyId, journeyData>
+      // 這允許我們在測試中模擬 subcollections
     }
   }
 
@@ -827,7 +832,7 @@ export class FirestoreService {
   // ====================
 
   /**
-   * 儲存旅程記錄
+   * 儲存旅程記錄 (優化版 - 使用 Subcollections)
    */
   async saveJourneyRecord(journeyData: any): Promise<string> {
     try {
@@ -836,10 +841,12 @@ export class FirestoreService {
         throw new Error('User ID is required');
       }
 
-      // 生成旅程ID
+      const userId = journeyData.userId;
+      // 生成旅程ID (保持現有格式)
       const journeyId = `journey-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      const journeyRecord = {
+      // 移除 userId 從 journeyData，因為它在路徑中
+      const { userId: _, ...journeyRecord } = {
         id: journeyId,
         ...journeyData,
         createdAt: journeyData.createdAt || new Date(),
@@ -847,54 +854,58 @@ export class FirestoreService {
       };
 
       if (this.isTestEnvironment) {
-        this.mockCollections.get(FirestoreService.COLLECTIONS.JOURNEYS)?.set(journeyId, journeyRecord);
+        // 測試環境：使用 mock，但模擬子集合結構
+        const userJourneys = this.mockCollections.get(`user-${userId}-journeys`) || new Map();
+        userJourneys.set(journeyId, journeyRecord);
+        this.mockCollections.set(`user-${userId}-journeys`, userJourneys);
+        
+        // 更新用戶統計 (mock)
+        await this.updateUserStats(userId, 'incrementJourneys');
         return journeyId;
       }
 
-      // 生產環境：使用真實 Firestore
-      const journeyRef = doc(this.db, FirestoreService.COLLECTIONS.JOURNEYS, journeyId);
+      // 生產環境：使用 Subcollection
+      const journeyRef = doc(collection(this.db, 'users', userId, 'journeys'), journeyId);
       await setDoc(journeyRef, this.convertToFirestoreData(journeyRecord));
+      
+      // 更新用戶統計
+      await this.updateUserStats(userId, 'incrementJourneys');
 
       return journeyId;
     } catch (error: any) {
-      // 對於驗證錯誤，直接拋出而不使用 handleFirestoreError
       if (error.message === 'User ID is required') {
         throw error;
       }
-      throw this.handleFirestoreError(error, 'Failed to save journey record');
+      throw this.handleFirestoreError(error, 'Failed to save journey record to subcollection');
     }
   }
 
   /**
-   * 獲取用戶的旅程記錄
+   * 獲取用戶的旅程記錄 (優化版 - 使用 Subcollections)
    */
   async getUserJourneyRecords(userId: string, options?: { limit?: number; offset?: number }): Promise<any[]> {
     try {
       if (this.isTestEnvironment) {
-        const allJourneys = Array.from(this.mockCollections.get(FirestoreService.COLLECTIONS.JOURNEYS)?.values() || []);
-        const userJourneys = allJourneys
-          .filter((journey: any) => journey.userId === userId)
-          .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime()); // 按創建時間降序排列
+        // 測試環境：從模擬的子集合獲取
+        const userJourneys = Array.from(this.mockCollections.get(`user-${userId}-journeys`)?.values() || []);
+        const sorted = userJourneys
+          .sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
         
         const startIndex = options?.offset || 0;
-        const endIndex = startIndex + (options?.limit || userJourneys.length);
-        return userJourneys.slice(startIndex, endIndex);
+        const endIndex = startIndex + (options?.limit || sorted.length);
+        return sorted.slice(startIndex, endIndex);
       }
 
-      // 生產環境：使用真實 Firestore
-      const journeysCollection = collection(this.db, FirestoreService.COLLECTIONS.JOURNEYS);
+      // 生產環境：使用 Subcollection - 直接查詢用戶的旅程子集合
+      const journeysRef = collection(this.db, 'users', userId, 'journeys');
       
-      // 先查詢用戶的所有記錄，然後在客戶端排序
-      // 這避免了需要複合索引的問題
       let q = query(
-        journeysCollection,
-        where('userId', '==', userId)
+        journeysRef,
+        orderBy('createdAt', 'desc') // 直接在 Firestore 排序
       );
 
       if (options?.limit) {
-        // 由於無法直接使用 orderBy + limit，我們獲取更多記錄然後篩選
-        // 通常用戶不會有太多旅程記錄，所以這樣做是可行的
-        q = query(q, limit(Math.max(options.limit * 3, 100)));
+        q = query(q, limit(options.limit));
       }
 
       const querySnapshot = await getDocs(q);
@@ -903,47 +914,61 @@ export class FirestoreService {
       querySnapshot.forEach((doc) => {
         const journey = this.convertFromFirestoreData({
           id: doc.id,
+          userId: userId, // 添加回 userId 以保持兼容性
           ...doc.data(),
         });
         journeys.push(journey);
       });
 
-      // 客戶端排序：按創建時間降序
-      journeys.sort((a, b) => {
-        const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-        const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
-        return bTime - aTime;
-      });
-
-      // 客戶端分頁
-      if (options?.limit || options?.offset) {
-        const startIndex = options?.offset || 0;
-        const endIndex = startIndex + (options?.limit || journeys.length);
-        return journeys.slice(startIndex, endIndex);
+      // 分頁處理（如果需要 offset）
+      if (options?.offset) {
+        const startIndex = options.offset;
+        return journeys.slice(startIndex);
       }
 
       return journeys;
     } catch (error) {
-      throw this.handleFirestoreError(error, `Failed to get user journey records: ${userId}`);
+      throw this.handleFirestoreError(error, `Failed to get user journey records from subcollection: ${userId}`);
     }
   }
 
   /**
-   * 根據ID獲取旅程記錄
+   * 根據ID獲取旅程記錄 (優化版 - 需要 userId)
    */
-  async getJourneyRecordById(journeyId: string): Promise<any | null> {
+  async getJourneyRecordById(journeyId: string, userId?: string): Promise<any | null> {
     try {
       if (this.isTestEnvironment) {
+        // 測試環境：檢查所有用戶的旅程記錄
+        if (userId) {
+          const userJourneys = this.mockCollections.get(`user-${userId}-journeys`);
+          return userJourneys?.get(journeyId) || null;
+        }
+        // Fallback: 檢查舊格式
         return this.mockCollections.get(FirestoreService.COLLECTIONS.JOURNEYS)?.get(journeyId) || null;
       }
 
-      const journeyRef = doc(this.db, FirestoreService.COLLECTIONS.JOURNEYS, journeyId);
-      const journeySnap = await getDoc(journeyRef);
-
-      if (journeySnap.exists()) {
+      // 生產環境：優先使用 Subcollection
+      if (userId) {
+        const journeyRef = doc(this.db, 'users', userId, 'journeys', journeyId);
+        const journeySnap = await getDoc(journeyRef);
+        
+        if (journeySnap.exists()) {
+          return this.convertFromFirestoreData({
+            id: journeySnap.id,
+            userId: userId, // 添加回 userId 以保持兼容性
+            ...journeySnap.data()
+          });
+        }
+      }
+      
+      // Fallback: 嘗試舊的 collection (向後兼容)
+      const legacyJourneyRef = doc(this.db, FirestoreService.COLLECTIONS.JOURNEYS, journeyId);
+      const legacySnap = await getDoc(legacyJourneyRef);
+      
+      if (legacySnap.exists()) {
         return this.convertFromFirestoreData({
-          id: journeySnap.id,
-          ...journeySnap.data()
+          id: legacySnap.id,
+          ...legacySnap.data()
         });
       }
 
@@ -954,17 +979,15 @@ export class FirestoreService {
   }
 
   /**
-   * 更新旅程記錄
+   * 更新旅程記錄 (優化版 - 使用 Subcollections)
    */
   async updateJourneyRecord(journeyId: string, userId: string, updates: any): Promise<void> {
     try {
       if (this.isTestEnvironment) {
-        const journey = this.mockCollections.get(FirestoreService.COLLECTIONS.JOURNEYS)?.get(journeyId);
+        const userJourneys = this.mockCollections.get(`user-${userId}-journeys`);
+        const journey = userJourneys?.get(journeyId);
         if (!journey) {
           throw new Error('Journey not found');
-        }
-        if (journey.userId !== userId) {
-          throw new Error('Unauthorized: Journey does not belong to this user');
         }
 
         const updatedJourney = {
@@ -972,68 +995,154 @@ export class FirestoreService {
           ...updates,
           updatedAt: new Date()
         };
-        this.mockCollections.get(FirestoreService.COLLECTIONS.JOURNEYS)?.set(journeyId, updatedJourney);
+        userJourneys?.set(journeyId, updatedJourney);
         return;
       }
 
-      // 生產環境：先檢查權限
-      const journey = await this.getJourneyRecordById(journeyId);
-      if (!journey) {
+      // 生產環境：直接更新子集合中的文檔
+      const journeyRef = doc(this.db, 'users', userId, 'journeys', journeyId);
+      
+      // 檢查文檔是否存在
+      const journeySnap = await getDoc(journeyRef);
+      if (!journeySnap.exists()) {
         throw new Error('Journey not found');
       }
-      if (journey.userId !== userId) {
-        throw new Error('Unauthorized: Journey does not belong to this user');
-      }
 
-      const journeyRef = doc(this.db, FirestoreService.COLLECTIONS.JOURNEYS, journeyId);
       await updateDoc(journeyRef, this.convertToFirestoreData({
         ...updates,
         updatedAt: new Date()
       }));
     } catch (error: any) {
-      // 對於權限錯誤，直接拋出而不使用 handleFirestoreError
-      if (error.message.includes('Unauthorized') || error.message.includes('Journey not found')) {
+      if (error.message.includes('Journey not found')) {
         throw error;
       }
-      throw this.handleFirestoreError(error, `Failed to update journey record: ${journeyId}`);
+      throw this.handleFirestoreError(error, `Failed to update journey record in subcollection: ${journeyId}`);
     }
   }
 
   /**
-   * 刪除旅程記錄
+   * 刪除旅程記錄 (優化版 - 使用 Subcollections)
    */
   async deleteJourneyRecord(journeyId: string, userId: string): Promise<void> {
     try {
       if (this.isTestEnvironment) {
-        const journey = this.mockCollections.get(FirestoreService.COLLECTIONS.JOURNEYS)?.get(journeyId);
+        const userJourneys = this.mockCollections.get(`user-${userId}-journeys`);
+        const journey = userJourneys?.get(journeyId);
         if (!journey) {
           throw new Error('Journey not found');
         }
-        if (journey.userId !== userId) {
-          throw new Error('Unauthorized: Journey does not belong to this user');
-        }
 
-        this.mockCollections.get(FirestoreService.COLLECTIONS.JOURNEYS)?.delete(journeyId);
+        userJourneys?.delete(journeyId);
+        
+        // 更新用戶統計 (mock)
+        await this.updateUserStats(userId, 'decrementJourneys');
         return;
       }
 
-      // 生產環境：先檢查權限
-      const journey = await this.getJourneyRecordById(journeyId);
-      if (!journey) {
+      // 生產環境：直接刪除子集合中的文檔
+      const journeyRef = doc(this.db, 'users', userId, 'journeys', journeyId);
+      
+      // 檢查文檔是否存在
+      const journeySnap = await getDoc(journeyRef);
+      if (!journeySnap.exists()) {
         throw new Error('Journey not found');
       }
-      if (journey.userId !== userId) {
-        throw new Error('Unauthorized: Journey does not belong to this user');
-      }
 
-      const journeyRef = doc(this.db, FirestoreService.COLLECTIONS.JOURNEYS, journeyId);
       await deleteDoc(journeyRef);
+      
+      // 更新用戶統計
+      await this.updateUserStats(userId, 'decrementJourneys');
     } catch (error: any) {
-      // 對於權限錯誤，直接拋出而不使用 handleFirestoreError
-      if (error.message.includes('Unauthorized') || error.message.includes('Journey not found')) {
+      if (error.message.includes('Journey not found')) {
         throw error;
       }
-      throw this.handleFirestoreError(error, `Failed to delete journey record: ${journeyId}`);
+      throw this.handleFirestoreError(error, `Failed to delete journey record from subcollection: ${journeyId}`);
+    }
+  }
+
+  /**
+   * 按日期查詢用戶旅程記錄 (優化版 - 使用 Subcollections)
+   */
+  async getUserJourneysByDate(userId: string, date: string): Promise<any[]> {
+    try {
+      if (this.isTestEnvironment) {
+        const userJourneys = Array.from(this.mockCollections.get(`user-${userId}-journeys`)?.values() || []);
+        const targetDate = new Date(date);
+        
+        return userJourneys.filter((journey: any) => {
+          const journeyDate = journey.createdAt instanceof Date 
+            ? journey.createdAt 
+            : new Date(journey.createdAt);
+          return journeyDate.toISOString().split('T')[0] === date;
+        }).sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime());
+      }
+
+      // 生產環境：使用 Subcollection 進行高效的日期範圍查詢
+      const startOfDay = new Date(date + 'T00:00:00.000Z');
+      const endOfDay = new Date(date + 'T23:59:59.999Z');
+      
+      const journeysRef = collection(this.db, 'users', userId, 'journeys');
+      
+      const q = query(
+        journeysRef,
+        where('createdAt', '>=', Timestamp.fromDate(startOfDay)),
+        where('createdAt', '<=', Timestamp.fromDate(endOfDay)),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        userId: userId, // 添加回 userId 以保持兼容性
+        ...this.convertFromFirestoreData(doc.data())
+      }));
+    } catch (error) {
+      throw this.handleFirestoreError(error, `Failed to get journeys by date from subcollection: ${date}`);
+    }
+  }
+
+  /**
+   * 更新用戶統計資料
+   */
+  private async updateUserStats(userId: string, action: string): Promise<void> {
+    try {
+      if (this.isTestEnvironment) {
+        // 測試環境：更新 mock 用戶資料
+        const user = this.mockCollections.get(FirestoreService.COLLECTIONS.USERS)?.get(userId);
+        if (user) {
+          if (!user.stats) user.stats = { totalJourneys: 0, totalPhotosUploaded: 0, placesVisited: 0 };
+          
+          if (action === 'incrementJourneys') {
+            user.stats.totalJourneys = (user.stats.totalJourneys || 0) + 1;
+            user.stats.lastJourneyDate = new Date();
+          } else if (action === 'decrementJourneys') {
+            user.stats.totalJourneys = Math.max((user.stats.totalJourneys || 0) - 1, 0);
+          }
+          
+          user.updatedAt = new Date();
+          this.mockCollections.get(FirestoreService.COLLECTIONS.USERS)?.set(userId, user);
+        }
+        return;
+      }
+
+      // 生產環境：使用 Firestore 原子操作
+      const userRef = doc(this.db, FirestoreService.COLLECTIONS.USERS, userId);
+      
+      if (action === 'incrementJourneys') {
+        await updateDoc(userRef, {
+          'stats.totalJourneys': increment(1),
+          'stats.lastJourneyDate': Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      } else if (action === 'decrementJourneys') {
+        await updateDoc(userRef, {
+          'stats.totalJourneys': increment(-1),
+          updatedAt: Timestamp.now()
+        });
+      }
+    } catch (error) {
+      // 統計更新失敗不應該影響主要操作，只記錄警告
+      console.warn(`Failed to update user stats for ${userId}:`, error);
     }
   }
 }

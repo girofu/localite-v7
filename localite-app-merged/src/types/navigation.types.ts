@@ -1,34 +1,5 @@
-/**
- * 導航類型定義
- */
+// 統一的導航類型定義
+export type ScreenType = 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'journeyGen' | 'learningSheetsList' | 'badge' | 'badgeType' | 'badgeDetail' | 'previewBadge' | 'aboutLocalite' | 'news' | 'privacy' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation' | 'profile';
 
-export type RootStackParamList = {
-  Auth: undefined;
-  Main: undefined;
-  Merchant: undefined;
-};
-
-export type AuthStackParamList = {
-  Welcome: undefined;
-  Login: undefined;
-  Register: undefined;
-};
-
-export type MainTabParamList = {
-  Home: undefined;
-  Explore: undefined;
-  Profile: undefined;
-};
-
-export type MerchantStackParamList = {
-  MerchantRegister: undefined;
-  MerchantDashboard: undefined;
-  AddPlace: undefined;
-  EditPlace: { placeId: string };
-  PlaceDetails: { placeId: string };
-};
-
-export type NavigationProps = {
-  navigation: any;
-  route?: any;
-};
+// 導航函數類型
+export type NavigationFunction = (screen: ScreenType, params?: any) => void;

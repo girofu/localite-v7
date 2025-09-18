@@ -91,12 +91,12 @@ export class PersistenceService {
 
 // 導航會話管理
 export class NavigationSession {
-  private sessionId: string;
-  private currentPlace: any;
-  private currentGuide: any;
-  private messageHistory: any[];
-  private routeProgress: any;
-  private timestamp: number;
+  protected sessionId: string;
+  protected currentPlace: any;
+  protected currentGuide: any;
+  protected messageHistory: any[];
+  protected routeProgress: any;
+  protected timestamp: number;
 
   constructor(sessionId?: string) {
     this.sessionId = sessionId || Date.now().toString();
@@ -206,7 +206,7 @@ export class HybridNavigationSession extends NavigationSession {
 
   constructor(sessionId?: string, userId?: string | null) {
     super(sessionId);
-    this.userId = userId;
+    this.userId = userId ?? null;
   }
 
   /**
@@ -230,9 +230,9 @@ export class HybridNavigationSession extends NavigationSession {
         userId 
       });
     } catch (error) {
-      loggingService.error('Failed to enable remote sync', { 
+      loggingService.error('Failed to enable remote sync', {
         sessionId: this.sessionId,
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }

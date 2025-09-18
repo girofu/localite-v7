@@ -43,6 +43,7 @@ jest.mock('expo-image-picker', () => ({
       uri: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+IRjWjBqO6O2mhP//Z',
       width: 800,
       height: 600,
+      fileSize: 1024000,
       type: 'image',
       fileName: 'library-photo.jpg',
     }]
@@ -106,6 +107,96 @@ describe('ChatScreen - Photo Analysis Integration', () => {
     } as any;
 
     MockedGoogleAIService.mockImplementation(() => mockAIService);
+  });
+
+  describe('🔴 RED Phase - Photo Analysis Tests', () => {
+    it('should handle iOS limited photo library permission', async () => {
+      // Mock limited permission
+      MockedImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValueOnce({
+        status: PermissionStatus.GRANTED,
+        granted: true,
+        expires: 'never',
+        canAskAgain: true,
+        accessPrivileges: 'limited'
+      });
+
+      MockedImagePicker.launchImageLibraryAsync.mockResolvedValueOnce({
+        canceled: false,
+        assets: [{
+          uri: 'test-limited-photo.jpg',
+          width: 800,
+          height: 600,
+          fileSize: 512000,
+          type: 'image/jpeg',
+          fileName: 'limited-photo.jpg'
+        }]
+      } as any);
+
+      const { getByTestId } = render(<ChatScreen {...mockProps} />);
+
+      fireEvent.press(getByTestId('add-options-button'));
+      fireEvent.press(getByTestId('library-option'));
+
+      await waitFor(() => {
+        expect(MockedImagePicker.launchImageLibraryAsync).toHaveBeenCalledWith({
+          mediaTypes: ['images'],
+          allowsEditing: false,
+          quality: 0.8,
+        });
+      });
+    });
+
+    it('should show appropriate error message for denied permission', async () => {
+      const mockAlert = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+      MockedImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValueOnce({
+        status: PermissionStatus.DENIED,
+        granted: false,
+        expires: 'never',
+        canAskAgain: false,
+      });
+
+      const { getByTestId } = render(<ChatScreen {...mockProps} />);
+
+      fireEvent.press(getByTestId('add-options-button'));
+      fireEvent.press(getByTestId('library-option'));
+
+      await waitFor(() => {
+        expect(mockAlert).toHaveBeenCalledWith(
+          expect.stringContaining('請前往設定 > 隱私與安全性 > 照片')
+        );
+      });
+
+      mockAlert.mockRestore();
+    });
+
+    it('should handle ImagePicker launch errors gracefully', async () => {
+      const mockAlert = jest.spyOn(window, 'alert').mockImplementation(() => {});
+
+      MockedImagePicker.requestMediaLibraryPermissionsAsync.mockResolvedValueOnce({
+        status: PermissionStatus.GRANTED,
+        granted: true,
+        expires: 'never',
+        canAskAgain: true,
+      });
+
+      MockedImagePicker.launchImageLibraryAsync.mockRejectedValueOnce(
+        new Error('Permission denied by user')
+      );
+
+      const { getByTestId } = render(<ChatScreen {...mockProps} />);
+
+      fireEvent.press(getByTestId('add-options-button'));
+      fireEvent.press(getByTestId('library-option'));
+
+      await waitFor(() => {
+        expect(mockAlert).toHaveBeenCalledWith(
+          expect.stringContaining('選擇照片失敗')
+        );
+      });
+
+      mockAlert.mockRestore();
+    });
   });
 
   describe('🔴 RED Phase - Photo Analysis Tests', () => {

@@ -21,6 +21,7 @@ import JourneyDetailScreen from '../screens/JourneyDetailScreen';
 import JourneyMainScreen from '../screens/JourneyMainScreen';
 import JourneyGenScreen from '../screens/JourneyGenScreen';
 import LearningSheetsListScreen from '../screens/LearningSheetsListScreen';
+import LearningScreen from '../screens/LearningScreen';
 import BadgeScreen from '../screens/BadgeScreen';
 import BadgeTypeScreen from '../screens/BadgeTypeScreen';
 import BadgeDetailScreen from '../screens/BadgeDetailScreen';
@@ -35,11 +36,11 @@ import ExhibitCardPreviewScreen from '../screens/ExhibitCardPreviewScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { JourneyProvider } from '../contexts/JourneyContext';
 import { UpdateProvider } from '../contexts/UpdateContext';
-
-type ScreenType = 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'journeyGen' | 'learningSheetsList' | 'badge' | 'badgeType' | 'badgeDetail' | 'previewBadge' | 'aboutLocalite' | 'news' | 'privacy' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation' | 'profile';
+import { ScreenType } from '../src/types/navigation.types';
+import { ServiceManager } from '../src/services/ServiceManager';
 
 export default function Index() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, verificationState } = useAuth();
   const [screen, setScreen] = useState<ScreenType>('home');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [selectedGuide, setSelectedGuide] = useState<string>('kuron');
@@ -47,6 +48,7 @@ export default function Index() {
   const [showJourneyValidation, setShowJourneyValidation] = useState(false);
   const [showEndOptions, setShowEndOptions] = useState(false);
   const [navigationHistory, setNavigationHistory] = useState<string[]>([]);
+  const [screenParams, setScreenParams] = useState<any>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   // 使用 AuthContext 的 user 狀態而不是本地狀態
@@ -56,7 +58,26 @@ export default function Index() {
   useEffect(() => {
     if (user && (screen === 'login' || screen === 'signup')) {
       logger.info('用戶登入成功，自動導航', { userId: user.uid, currentScreen: screen });
-      
+
+      // 檢查並授予首次登入徽章
+      const checkFirstLoginBadge = async () => {
+        try {
+          const badgeService = ServiceManager.getBadgeService();
+          const awardedBadges = await badgeService.checkBadgeConditions(user.uid, 'first_login');
+
+          if (awardedBadges.length > 0) {
+            logger.info('首次登入徽章獲得', {
+              userId: user.uid,
+              badges: awardedBadges.map(b => b.name)
+            });
+          }
+        } catch (error) {
+          console.error('檢查首次登入徽章時發生錯誤:', error);
+        }
+      };
+
+      checkFirstLoginBadge();
+
       if (returnToChat) {
         // 從聊天畫面來的登入，返回聊天
         setReturnToChat(false);
@@ -150,8 +171,9 @@ export default function Index() {
     saveVoiceSetting();
   }, [voiceEnabled]);
 
-  const navigateToScreen = (targetScreen: ScreenType) => {
+  const navigateToScreen = (targetScreen: ScreenType, params?: any) => {
     setNavigationHistory(prev => [...prev, screen]);
+    setScreenParams(params);
     setScreen(targetScreen);
   };
 
@@ -165,15 +187,59 @@ export default function Index() {
     }
   };
 
+  // 專門用於關閉抽屜導航的函數
+  const closeDrawer = () => {
+    console.log('DrawerNavigation 關閉開始');
+    console.log('當前導航歷史:', navigationHistory);
+    console.log('當前頁面:', screen);
+    
+    // DrawerNavigation 和其子頁面，關閉抽屜時應該跳過這些頁面
+    const drawerRelatedPages = ['drawerNavigation', 'journeyMain', 'learningSheetsList', 'badge', 'aboutLocalite', 'profile', 'login', 'register'];
+    
+    // 簡化邏輯：找到最後一個不是 drawer 相關頁面的歷史記錄
+    let targetScreen = 'home';
+    let newHistory = [];
+    
+    // 從後往前檢查導航歷史
+    for (let i = navigationHistory.length - 1; i >= 0; i--) {
+      const historyScreen = navigationHistory[i];
+      if (!drawerRelatedPages.includes(historyScreen)) {
+        targetScreen = historyScreen;
+        newHistory = navigationHistory.slice(0, i);
+        console.log(`找到目標頁面: ${targetScreen}, 新歷史長度: ${newHistory.length}`);
+        break;
+      }
+    }
+    
+    console.log(`最終目標頁面: ${targetScreen}`);
+    
+    // 確保目標頁面是有效的
+    const validScreens = ['home', 'chat', 'guide', 'guideSelection', 'locationScan', 'journeyDetail', 'journeyEnd', 'chatEnd', 'learningSheet', 'news', 'privacy', 'signup'];
+    if (!validScreens.includes(targetScreen) || targetScreen === 'drawerNavigation') {
+      console.log(`無效的目標頁面 ${targetScreen}, 改為 home`);
+      targetScreen = 'home';
+      newHistory = [];
+    }
+    
+    // 更新導航歷史和當前頁面
+    setNavigationHistory(newHistory);
+    
+    // 使用 setTimeout 確保狀態更新後立即切換畫面
+    setTimeout(() => {
+      setScreen(targetScreen as ScreenType);
+      console.log('DrawerNavigation 關閉完成，已切換至:', targetScreen);
+    }, 0);
+  };
+
   // 渲染對應的頁面
   const renderScreen = () => {
     switch (screen) {
       case 'journeyMain':
-        return <JourneyMainScreen onClose={goBack} onNavigate={navigateToScreen} />;
+        return <JourneyMainScreen onClose={goBack} onNavigate={navigateToScreen} isLoggedIn={isLoggedIn} verificationState={verificationState} />;
       case 'learningSheetsList':
-        return <LearningSheetsListScreen onClose={goBack} onNavigate={navigateToScreen} />;
+        return <LearningScreen onClose={goBack} onNavigate={navigateToScreen} isLoggedIn={isLoggedIn} verificationState={verificationState} />;
       case 'badge':
-        return <BadgeScreen onClose={goBack} onNavigate={navigateToScreen} />;
+        return <BadgeScreen onClose={goBack} onNavigate={navigateToScreen} isLoggedIn={isLoggedIn} verificationState={verificationState} />;
       case 'aboutLocalite':
         return <AboutLocalite onBack={goBack} onNavigateToNews={() => navigateToScreen('news')} onNavigateToPrivacy={() => navigateToScreen('privacy')} />;
       case 'news':
@@ -279,19 +345,28 @@ export default function Index() {
       case 'learningSheet':
         return <LearningSheetScreen onClose={goBack} onNavigate={navigateToScreen} />;
       case 'journeyDetail':
-        return <JourneyDetailScreen onClose={goBack} onNavigate={navigateToScreen} />;
+        return (
+          <JourneyDetailScreen 
+            onClose={goBack} 
+            onNavigate={navigateToScreen}
+            journeyData={screenParams}
+            journeyId={screenParams?.journeyId}
+          />
+        );
       case 'journeyGen':
         return <JourneyGenScreen onClose={goBack} onNavigate={navigateToScreen} />;
       case 'badgeType':
-        return <BadgeTypeScreen onClose={goBack} onNavigate={navigateToScreen} badgeType="" />;
+        return <BadgeTypeScreen onClose={goBack} onNavigate={navigateToScreen} badgeType={screenParams} isLoggedIn={isLoggedIn} />;
       case 'badgeDetail':
-        return <BadgeDetailScreen onClose={goBack} onNavigate={navigateToScreen} badge={{} as any} />;
+        return <BadgeDetailScreen onClose={goBack} onNavigate={navigateToScreen} badge={screenParams} isLoggedIn={isLoggedIn} />;
       case 'previewBadge':
         return <PreviewBadgeScreen onClose={goBack} onNavigate={navigateToScreen} />;
       case 'chatEnd':
         return (
           <ChatEndScreen
             guideId={selectedGuide}
+            userId={user?.uid}
+            placeId={selectedPlaceId || undefined}
             onClose={goBack}
             onExploreMore={() => navigateToScreen('map')}
             onGenerateRecord={() => navigateToScreen('learningSheet')}
@@ -312,7 +387,8 @@ export default function Index() {
       case 'drawerNavigation':
         return (
           <DrawerNavigation
-            onClose={goBack}
+            onClose={closeDrawer}
+            onBack={goBack}
             onNavigateToLogin={() => navigateToScreen('login')}
             onNavigateToRegister={() => navigateToScreen('signup')}
             onNavigateToJourneyMain={() => navigateToScreen('journeyMain')}

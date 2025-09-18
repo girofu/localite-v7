@@ -665,19 +665,43 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
       
       if (permissionResult.status !== 'granted') {
         console.log('❌ 權限被拒絕:', permissionResult.status);
-        alert('需要相簿權限才能選擇照片\n請在設備設定中允許存取照片');
+
+        let errorMessage = '需要相簿權限才能選擇照片\n\n';
+
+        if (permissionResult.status === 'denied') {
+          errorMessage += '請前往設定 > 隱私與安全性 > 照片，將應用程式的相簿權限設定為「所有照片」或「已選取的照片」。';
+        } else if (permissionResult.accessPrivileges === 'limited') {
+          errorMessage += '目前僅允許存取部分照片。請前往設定 > 隱私與安全性 > 照片，將應用程式的相簿權限設定為「所有照片」。';
+        } else {
+          errorMessage += '請在設備設定中允許存取照片權限。';
+        }
+
+        alert(errorMessage);
         return;
       }
       
       console.log('✅ 權限已獲得，啟動圖片選擇器...');
       
+      // 根據權限狀態調整參數
+      let pickerOptions: any = {
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        aspect: [4, 3],
+        quality: 0.8,
+      };
+
       // 針對 iOS limited 權限使用簡化的參數
       if (permissionResult.accessPrivileges === 'limited') {
         console.log('📱 檢測到 iOS limited 權限，使用相容參數');
+        pickerOptions = {
+          mediaTypes: ['images'],
+          allowsEditing: false,
+          quality: 0.8,
+        };
       }
-      
-      // 直接使用經過測試的有效參數組合
-      const result = await ImagePicker.launchImageLibraryAsync();
+
+      console.log('📸 啟動圖片選擇器，參數:', pickerOptions);
+      const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
       
       console.log('📸 圖片選擇結果:', JSON.stringify(result, null, 2));
       
@@ -742,17 +766,24 @@ export default function ChatScreen({ onClose, guideId = 'kuron', placeId, onNavi
       
     } catch (error) {
       console.error('❌ 選擇照片過程出錯:', error);
-      console.error('錯誤詳情:', error instanceof Error ? error.message : String(error));
-      
-      // 簡化的錯誤處理
-      let errorMessage = `選擇照片失敗：${error instanceof Error ? error.message : String(error)}\n\n`;
-      
-      if (permissionResult?.accessPrivileges === 'limited') {
-        errorMessage += `檢測到 iOS 限制權限模式\n\n建議解決方案:\n1. 設定 → 隱私與安全性 → 照片 → 本應用\n2. 選擇「所有照片」替代「已選取的照片」\n3. 重啟應用後重試`;
+      const errorDetails = error instanceof Error ? error.message : String(error);
+      console.error('錯誤詳情:', errorDetails);
+
+      // 詳細的錯誤處理
+      let errorMessage = `選擇照片失敗：${errorDetails}\n\n`;
+
+      // 檢查是否是權限相關錯誤
+      if (errorDetails.includes('permission') || errorDetails.includes('Permission') || errorDetails.includes('權限')) {
+        errorMessage += `這可能是權限設定問題，請嘗試：\n\n`;
+        errorMessage += `1. 設定 → 隱私與安全性 → 照片 → ${permissionResult?.accessPrivileges === 'limited' ? '選擇「所有照片」' : '允許存取照片'}\n`;
+        errorMessage += `2. 如果已經是「所有照片」，請嘗試重新啟動應用程式\n`;
+        errorMessage += `3. 確認應用程式有最新的權限設定`;
+      } else if (errorDetails.includes('cancelled') || errorDetails.includes('user cancelled')) {
+        errorMessage = '用戶取消了選擇操作';
       } else {
-        errorMessage += `請檢查:\n• 設備是否有照片\n• 應用是否有相簿權限\n• 網路連線是否正常`;
+        errorMessage += `請檢查:\n• 設備相簿中是否有照片\n• 應用程式是否有完整的相簿權限\n• 網路連線是否正常\n• 設備儲存空間是否充足`;
       }
-      
+
       alert(errorMessage);
     }
   };

@@ -44,5 +44,11 @@ export const GUIDES: Guide[] = [
     description: '來自忠寮社區的小豬忠忠，個性溫和有禮貌，身上總是帶著迷人的香味。',
     limitedPlaces: ['p03', 'p04'], // 限定在忠寮李舉人宅(p03)和忠寮竹圍仔十號宅(p04)出現
   },
-  // 之後可再新增更多導覽員
-]; 
+  {
+    id: 'babyron',
+    id_no: 'g06',
+    name: 'BABYRON',
+    image: require('../assets/guides/babyron.png'),
+    description: '綠芽初登場！首次成功登入的專屬限定導覽員，充滿好奇心和探索精神的小夥伴。',
+  },
+];

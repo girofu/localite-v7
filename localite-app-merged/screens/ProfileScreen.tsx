@@ -7,10 +7,12 @@ import {
   TouchableOpacity, 
   TextInput,
   Alert,
-  Platform 
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../src/contexts/AuthContext';
+import { logger } from '../src/services/LoggingService';
 
 interface ProfileScreenProps {
   onBack?: () => void;
@@ -26,7 +28,15 @@ export default function ProfileScreen({
   onDeleteAccount 
 }: ProfileScreenProps) {
   // 🔥 使用實際認證狀態，而非硬編碼
-  const { user, signOut } = useAuth();
+  const { 
+    user, 
+    signOut, 
+    verificationState, 
+    sendEmailVerification, 
+    checkEmailVerificationStatus,
+    reloadUser,
+    canAccessFeature 
+  } = useAuth();
   const userEmail = user?.email || '';
   const emailPrefix = userEmail.split('@')[0]; // 提取 @ 前的部分
   
@@ -34,6 +44,11 @@ export default function ProfileScreen({
   const [isEditingName, setIsEditingName] = useState(false);
   const [displayName, setDisplayName] = useState(emailPrefix || '訪客');
   const [tempName, setTempName] = useState(displayName);
+  
+  // 🟢 Green：Email 驗證相關狀態
+  const [emailVerificationLoading, setEmailVerificationLoading] = useState(false);
+  const [lastSentTime, setLastSentTime] = useState<number>(0);
+  const SEND_COOLDOWN = 60000; // 60 秒冷卻期
 
   // 🔥 當用戶狀態變化時更新顯示名稱
   useEffect(() => {
@@ -41,6 +56,31 @@ export default function ProfileScreen({
     setDisplayName(newDisplayName);
     setTempName(newDisplayName);
   }, [emailPrefix]);
+
+  // 🔥 新增：頁面載入時自動檢查驗證狀態
+  useEffect(() => {
+    const checkVerificationStatusOnLoad = async () => {
+      // 只有在用戶已登入且處於待驗證狀態時才檢查
+      if (user && verificationState === 'pending_verification') {
+        logger.info('個人檔案頁面載入，檢查最新驗證狀態', { 
+          userId: user.uid,
+          currentState: verificationState 
+        });
+        
+        try {
+          // 重新載入用戶資料以檢查最新的驗證狀態
+          await reloadUser();
+        } catch (error) {
+          logger.warn('個人檔案頁面驗證狀態檢查失敗', {
+            userId: user.uid,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+    };
+
+    checkVerificationStatusOnLoad();
+  }, [user?.uid, verificationState]); // 依賴 userId 和 verificationState
 
   // 🔥 處理登出功能
   const handleLogout = async () => {
@@ -97,6 +137,19 @@ export default function ProfileScreen({
   };
 
   const handleDeleteAccount = () => {
+    // 🟢 Green：檢查刪除帳號權限
+    if (!canAccessFeature('delete_account')) {
+      Alert.alert(
+        '需要驗證信箱',
+        '請先完成信箱驗證才能刪除帳號',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '前往驗證', onPress: handleSendVerificationEmail }
+        ]
+      );
+      return;
+    }
+
     Alert.alert(
       '確認刪除帳號',
       '此操作無法復原，確定要刪除您的帳號嗎？',
@@ -106,6 +159,57 @@ export default function ProfileScreen({
       ]
     );
   };
+
+  // 🟢 Green：發送驗證 email (加入冷卻期限制)
+  const handleSendVerificationEmail = async () => {
+    const now = Date.now();
+    const timeSinceLastSend = now - lastSentTime;
+    
+    // 檢查是否在冷卻期內
+    if (timeSinceLastSend < SEND_COOLDOWN) {
+      const remainingSeconds = Math.ceil((SEND_COOLDOWN - timeSinceLastSend) / 1000);
+      Alert.alert(
+        '請稍候', 
+        `請等待 ${remainingSeconds} 秒後再重新發送，避免觸發頻率限制`
+      );
+      return;
+    }
+
+    try {
+      setEmailVerificationLoading(true);
+      const result = await sendEmailVerification({
+        languageCode: 'zh-TW'
+      });
+      
+      if (result.success) {
+        setLastSentTime(now); // 記錄發送時間
+        Alert.alert('發送成功', '驗證信已重新發送到您的信箱，請檢查並點擊驗證連結');
+      } else {
+        // 處理 Firebase 特定錯誤
+        const errorMessage = result.error?.message || '發送失敗，請稍後再試';
+        if (errorMessage.includes('too-many-requests')) {
+          Alert.alert('發送頻率過高', '請稍後再試，或檢查信箱是否已收到先前發送的驗證信');
+        } else {
+          Alert.alert('發送失敗', errorMessage);
+        }
+      }
+    } catch (error: any) {
+      console.error('發送驗證信錯誤:', error);
+      
+      // 處理 Firebase auth/too-many-requests 錯誤
+      if (error.message?.includes('too-many-requests') || error.code === 'auth/too-many-requests') {
+        Alert.alert(
+          '發送頻率過高', 
+          '為避免濫用，請稍候 1-2 分鐘後再試，或檢查信箱是否已收到驗證信'
+        );
+      } else {
+        Alert.alert('發送失敗', error.message || '網路錯誤，請稍後再試');
+      }
+    } finally {
+      setEmailVerificationLoading(false);
+    }
+  };
+
 
   return (
     <View style={styles.container}>
@@ -162,6 +266,51 @@ export default function ProfileScreen({
             </Text>
           </View>
 
+          {/* 🟢 Green：Email 驗證狀態顯示 */}
+          {user && (
+            <View style={styles.profileRow}>
+              <View style={styles.rowLeft}>
+                <Image 
+                  source={require('../assets/icons/icon_mail.png')} 
+                  style={[styles.rowIcon, { tintColor: verificationState === 'verified' ? '#10B981' : '#F59E0B' }]} 
+                />
+                <Text style={styles.rowLabel}>驗證狀態</Text>
+              </View>
+              <View style={styles.verificationContainer}>
+                <View style={styles.verificationStatus}>
+                  <Text style={[
+                    styles.verificationText,
+                    { color: verificationState === 'verified' ? '#10B981' : '#F59E0B' }
+                  ]}>
+                    {verificationState === 'verified' ? '✅ 已驗證' : '⏳ 待驗證'}
+                  </Text>
+                </View>
+                
+                {/* 未驗證用戶顯示重新發送按鈕和提示 */}
+                {verificationState === 'pending_verification' && (
+                  <View style={styles.verificationActions}>
+                    <TouchableOpacity 
+                      style={[styles.verificationButton, styles.primaryVerificationButton, emailVerificationLoading && styles.disabledButton]}
+                      onPress={handleSendVerificationEmail}
+                      disabled={emailVerificationLoading}
+                    >
+                      {emailVerificationLoading ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <Text style={[styles.verificationButtonText, styles.primaryVerificationButtonText]}>重新發送驗證信</Text>
+                      )}
+                    </TouchableOpacity>
+                    
+                    {/* 驗證提示信息 */}
+                    <Text style={styles.verificationHint}>
+                      💡 點擊驗證連結後，請重新進入此頁面或等待自動更新
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Name/Nickname */}
           <View style={styles.profileRow}>
             <View style={styles.rowLeft}>
@@ -216,15 +365,33 @@ export default function ProfileScreen({
 
         {/* Action Buttons */}
         <TouchableOpacity 
-          style={styles.upgradeButton} 
-          onPress={onUpgradeSubscription}
+          style={[
+            styles.upgradeButton,
+            !canAccessFeature('update_profile') && styles.disabledButton
+          ]} 
+          onPress={() => {
+            if (!canAccessFeature('update_profile')) {
+              Alert.alert(
+                '需要驗證信箱', 
+                '請先完成信箱驗證才能升級訂閱',
+                [
+                  { text: '取消', style: 'cancel' },
+                  { text: '前往驗證', onPress: handleSendVerificationEmail }
+                ]
+              );
+              return;
+            }
+            onUpgradeSubscription?.();
+          }}
           activeOpacity={0.8}
         >
           <Image 
             source={require('../assets/icons/icon_sparkles.png')} 
             style={styles.upgradeIcon} 
           />
-          <Text style={styles.upgradeButtonText}>昇級訂閱方案</Text>
+          <Text style={styles.upgradeButtonText}>
+            {verificationState === 'verified' ? '昇級訂閱方案' : '🔒 昇級訂閱方案 (需驗證)'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -473,5 +640,54 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#FFFFFF',
     fontSize: 16,
+  },
+
+  // 🟢 Green：Email 驗證狀態樣式
+  verificationContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
+  verificationStatus: {
+    marginBottom: 8,
+  },
+  verificationText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  verificationActions: {
+    flexDirection: 'column',
+    gap: 8,
+  },
+  verificationButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#4299E1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  primaryVerificationButton: {
+    backgroundColor: '#4299E1',
+    borderColor: '#4299E1',
+  },
+  verificationButtonText: {
+    color: '#4299E1',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  primaryVerificationButtonText: {
+    color: '#FFFFFF',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  verificationHint: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

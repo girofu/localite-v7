@@ -36,5 +36,7 @@ export interface BadgeTriggerMetadata {
   quizCorrectAnswers?: number;
   shareCount?: number;
   locationId?: string;
+  placeName?: string;
+  placeId?: string;
   [key: string]: any;
 }

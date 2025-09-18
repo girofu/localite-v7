@@ -12,6 +12,8 @@ import { FirestoreService } from './FirestoreService';
 import { GoogleAIService } from './GoogleAIService';
 import { GoogleTTSService } from './GoogleTTSService';
 import { FirebaseStorageService } from './FirebaseStorageService';
+import { BadgeService } from './BadgeService';
+import LoggingService from './LoggingService';
 
 export class ServiceManager {
   private static instance: ServiceManager;
@@ -26,6 +28,8 @@ export class ServiceManager {
   public readonly apiService: APIService;
   public readonly multiLanguageService: MultiLanguageService;
   public readonly errorHandlingService: ErrorHandlingService;
+  public readonly badgeService: BadgeService;
+  public readonly loggingService: LoggingService;
 
   public constructor(services?: any) {
     if (services) {
@@ -36,6 +40,8 @@ export class ServiceManager {
       this.storageService = services.storage || new FirebaseStorageService();
       this.errorHandlingService = services.errorHandling || new ErrorHandlingService();
       this.multiLanguageService = services.language || new MultiLanguageService();
+      this.loggingService = services.logging || new LoggingService();
+      this.badgeService = services.badge || new BadgeService(this.firestoreService, this.loggingService);
       this.apiService = services.api || new APIService({
         firestoreService: this.firestoreService,
         aiService: this.aiService,
@@ -52,7 +58,9 @@ export class ServiceManager {
       // 初始化整合服務
       this.errorHandlingService = new ErrorHandlingService();
       this.multiLanguageService = new MultiLanguageService();
-      
+      this.loggingService = new LoggingService();
+      this.badgeService = new BadgeService(this.firestoreService, this.loggingService);
+
       // 初始化 API 服務（注入依賴）
       this.apiService = new APIService({
         firestoreService: this.firestoreService,
@@ -71,6 +79,11 @@ export class ServiceManager {
     return ServiceManager.instance;
   }
 
+  // 便捷方法獲取 BadgeService
+  public static getBadgeService(): BadgeService {
+    return ServiceManager.getInstance().badgeService;
+  }
+
   // 服務健康檢查
   public async checkAllServicesHealth() {
     return await this.apiService.getHealthStatus();
@@ -86,6 +99,8 @@ export class ServiceManager {
       apiService: 'healthy' as const,
       multiLanguageService: 'healthy' as const,
       errorHandlingService: 'healthy' as const,
+      badgeService: 'healthy' as const,
+      loggingService: 'healthy' as const,
       firestoreService: 'healthy' as const,
       aiService: 'healthy' as const,
       ttsService: 'healthy' as const,
@@ -156,12 +171,14 @@ export class ServiceManager {
       timestamp: new Date().toISOString(),
       services: {
         api: 'healthy',
-        firestore: 'healthy', 
+        firestore: 'healthy',
         storage: 'healthy',
         tts: 'healthy',
         ai: 'healthy',
         multilanguage: 'healthy',
-        errorHandling: 'healthy'
+        errorHandling: 'healthy',
+        badge: 'healthy',
+        logging: 'healthy'
       }
     };
   }

@@ -170,6 +170,12 @@ export class BadgeService {
    * @returns 授予的徽章或null
    */
   private async checkExplorationBadges(userId: string, toursCount: number): Promise<Badge | null> {
+    if (toursCount >= 10) {
+      return await this.checkAndAwardBadge(userId, BADGE_CONDITIONS.TOURS_COMPLETED_10);
+    }
+    if (toursCount >= 5) {
+      return await this.checkAndAwardBadge(userId, BADGE_CONDITIONS.TOURS_COMPLETED_5);
+    }
     if (toursCount >= 3) {
       return await this.checkAndAwardBadge(userId, BADGE_CONDITIONS.TOURS_COMPLETED_3);
     }
@@ -184,22 +190,24 @@ export class BadgeService {
    * @returns 授予的徽章或null
    */
   private async checkQuizBadges(userId: string, metadata?: BadgeTriggerMetadata): Promise<Badge | null> {
-    // 檢查首次問答徽章 (B3-1 手冊)
-    const hasFirstQuizBadge = await this.firestoreService.hasUserBadge(userId, 'B3-1');
-    if (!hasFirstQuizBadge) {
-      const badge = getBadgeById('B3-1');
-      if (badge) {
-        await this.firestoreService.awardBadgeToUser(userId, 'B3-1');
-        this.loggingService.info('First quiz badge awarded', {
-          userId,
-          badgeId: 'B3-1',
-          metadata
-        });
-        return badge;
-      }
+    const quizCount = metadata?.quizCorrectAnswers || 1;
+
+    // 檢查問答徽章
+    if (quizCount >= 1) {
+      const badge = await this.checkAndAwardBadge(userId, BADGE_CONDITIONS.QUIZ_COMPLETED_1);
+      if (badge) return badge;
     }
 
-    // 可以根據 metadata 添加更多問答徽章邏輯
+    if (quizCount >= 5) {
+      const badge = await this.checkAndAwardBadge(userId, BADGE_CONDITIONS.QUIZ_COMPLETED_5);
+      if (badge) return badge;
+    }
+
+    if (quizCount >= 10) {
+      const badge = await this.checkAndAwardBadge(userId, BADGE_CONDITIONS.QUIZ_COMPLETED_10);
+      if (badge) return badge;
+    }
+
     return null;
   }
 
@@ -215,21 +223,17 @@ export class BadgeService {
     const placeId = metadata?.placeId || '';
 
     // 檢查忠寮地區特殊徽章 (B7-1 忠忠初登場)
-    if (placeName.includes('忠寮') || placeId.includes('zhongliao')) {
-      const hasLocationBadge = await this.firestoreService.hasUserBadge(userId, 'B7-1');
-      if (!hasLocationBadge) {
-        const badge = getBadgeById('B7-1');
-        if (badge) {
-          await this.firestoreService.awardBadgeToUser(userId, 'B7-1');
-          this.loggingService.info('Location-specific badge awarded', {
-            userId,
-            badgeId: 'B7-1',
-            placeName,
-            placeId,
-            metadata
-          });
-          return badge;
-        }
+    if (placeName.includes('忠寮') || placeId.includes('zhongliao') || placeName.includes('Zhongliao')) {
+      const badge = await this.checkAndAwardBadge(userId, BADGE_CONDITIONS.LOCATION_ZHONGLIAO);
+      if (badge) {
+        this.loggingService.info('Location-specific badge awarded', {
+          userId,
+          badgeId: BADGE_CONDITIONS.LOCATION_ZHONGLIAO,
+          placeName,
+          placeId,
+          metadata
+        });
+        return badge;
       }
     }
 

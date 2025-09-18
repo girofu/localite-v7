@@ -16,11 +16,16 @@ const badgeItemWidth = (screenWidth - 48) / 2; // 兩列佈局，考慮間距
 
 interface BadgeScreenProps {
   onClose: () => void;
-  onNavigate: (screen: 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'journeyGen' | 'learningSheetsList' | 'badge' | 'badgeType' | 'badgeDetail' | 'aboutLocalite' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation' | 'previewBadge' | 'profile', badgeType?: string, badge?: Badge) => void;
+  onNavigate: (screen: 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'journeyGen' | 'learningSheetsList' | 'badge' | 'badgeType' | 'badgeDetail' | 'aboutLocalite' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation' | 'previewBadge' | 'profile', params?: any) => void;
   isLoggedIn?: boolean;
+  verificationState?: string;
 }
 
-export default function BadgeScreen({ onClose, onNavigate, isLoggedIn = false }: BadgeScreenProps) {
+export default function BadgeScreen({ onClose, onNavigate, isLoggedIn = false, verificationState = 'pending_verification' }: BadgeScreenProps) {
+  // 檢查用戶是否可以查看徽章（已登入且已驗證）
+  const isVerified = verificationState === 'verified';
+  const canViewBadges = isLoggedIn && isVerified;
+  
   // 模擬用戶已獲得的徽章（實際應用中這會來自用戶數據）
   const userBadges = ['B2-1']; // 假設用戶已獲得「綠芽初登場」徽章
 
@@ -72,7 +77,7 @@ export default function BadgeScreen({ onClose, onNavigate, isLoggedIn = false }:
       style={styles.badgeItem}
       onPress={() => {
         if (isUnlocked) {
-          onNavigate('badgeDetail', undefined, badge);
+          onNavigate('badgeDetail', badge);
         }
       }}
       activeOpacity={isUnlocked ? 0.8 : 1}
@@ -183,8 +188,48 @@ export default function BadgeScreen({ onClose, onNavigate, isLoggedIn = false }:
             </TouchableOpacity>
           </View>
         </View>
+      ) : !isVerified ? (
+        // 已登入但未驗證狀態
+        <View style={styles.contentContainer}>
+          {/* Verification Required Icon */}
+          <View style={styles.lockIconContainer}>
+            <Image 
+              source={require('../assets/icons/icon_lockman.png')} 
+              style={styles.lockIcon}
+              resizeMode="contain"
+            />
+          </View>
+          
+          {/* Verification Message */}
+          <View style={styles.messageContainer}>
+            <View style={styles.messageRow}>
+              <Image source={require('../assets/icons/icon_sparkles.png')} style={styles.sparklesIcon} />
+              <Text style={styles.verificationMessage}>請驗證您的信箱以查看徽章</Text>
+            </View>
+            <Text style={styles.verificationSubMessage}>
+              驗證後即可收集和查看您的專屬徽章
+            </Text>
+          </View>
+          
+          {/* Call to Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity 
+              style={styles.verificationButton}
+              onPress={() => onNavigate('profile')}
+            >
+              <Text style={styles.verificationButtonText}>前往驗證</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.exploreButton}
+              onPress={() => onNavigate('guide')}
+            >
+              <Text style={styles.exploreButtonText}>探索更多地點</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       ) : (
-        // 已登入狀態
+        // 已登入且已驗證狀態
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.badgeContent}>
             {Object.entries(getCustomBadgeGroups()).map(([type, badges]) => 
@@ -392,5 +437,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 4,
+  },
+  // 驗證相關樣式
+  verificationMessage: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  verificationSubMessage: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+  verificationButton: {
+    backgroundColor: '#F59E0B',
+    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    width: '100%',
+  },
+  verificationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, Image, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { View, Text, StyleSheet, Dimensions, ScrollView, Image, TouchableOpacity, Modal, ActivityIndicator, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { PLACES } from '../data/places';
 import { getDistance } from '../utils/distance';
+
+// 平台條件性導入
+let MapView: any, Marker: any;
+if (Platform.OS !== 'web') {
+  const MapModule = require('react-native-maps');
+  MapView = MapModule.default;
+  Marker = MapModule.Marker;
+}
 
 const { width, height } = Dimensions.get('window');
 const DISTANCE_LIMIT = 500; // 公尺
@@ -61,46 +68,56 @@ export default function MapLocationScreen({ onBack, onPlaceSelect }: { onBack?: 
         </TouchableOpacity>
         <Text style={styles.headerTitle}>查看地圖</Text>
       </View>
-      {/* MapView */}
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.005,
-        }}
-        showsUserLocation
-      >
-        {visiblePlaces.map(place => (
-          <Marker
-            key={place.id}
-            coordinate={{ latitude: place.lat, longitude: place.lng }}
-            onPress={() => onPlaceSelect?.(place.id)}
-          >
-            <View style={{ alignItems: 'center' }}>
-              <Image
-                source={require('../assets/icons/icon_3dpin.png')}
-                style={{ width: 40, height: 48, resizeMode: 'contain' }}
-              />
-              <Text
-                style={{
-                  marginTop: 2,
-                  backgroundColor: 'rgba(255,255,255,0.85)',
-                  borderRadius: 6,
-                  paddingHorizontal: 6,
-                  fontWeight: 'bold',
-                  fontSize: 14,
-                  color: '#232323',
-                  overflow: 'hidden',
-                }}
-              >
-                {place.name}
-              </Text>
-            </View>
-          </Marker>
-        ))}
-      </MapView>
+      {/* MapView - 平台條件渲染 */}
+      {Platform.OS !== 'web' ? (
+        <MapView
+          style={styles.map}
+          initialRegion={{
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          }}
+          showsUserLocation
+        >
+          {visiblePlaces.map(place => (
+            <Marker
+              key={place.id}
+              coordinate={{ latitude: place.lat, longitude: place.lng }}
+              onPress={() => onPlaceSelect?.(place.id)}
+            >
+              <View style={{ alignItems: 'center' }}>
+                <Image
+                  source={require('../assets/icons/icon_3dpin.png')}
+                  style={{ width: 40, height: 48, resizeMode: 'contain' }}
+                />
+                <Text
+                  style={{
+                    marginTop: 2,
+                    backgroundColor: 'rgba(255,255,255,0.85)',
+                    borderRadius: 6,
+                    paddingHorizontal: 6,
+                    fontWeight: 'bold',
+                    fontSize: 14,
+                    color: '#232323',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {place.name}
+                </Text>
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+      ) : (
+        // Web 平台的替代方案
+        <View style={styles.map}>
+          <View style={styles.webMapPlaceholder}>
+            <Text style={styles.webMapText}>地圖功能僅支援原生平台</Text>
+            <Text style={styles.webMapSubtext}>請使用 iOS 或 Android 應用來查看地圖</Text>
+          </View>
+        </View>
+      )}
 
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalContainer}>
@@ -216,5 +233,23 @@ const styles = StyleSheet.create({
     color: '#232323',
     letterSpacing: 2,
     marginRight: 48,
+  },
+  // Web 平台樣式
+  webMapPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  webMapText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  webMapSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });

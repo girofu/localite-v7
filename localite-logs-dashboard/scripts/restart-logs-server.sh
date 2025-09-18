@@ -6,6 +6,15 @@
 PORT=5001
 SERVICE_NAME="日誌管理服務器"
 
+# 🌐 動態 IP 配置 (支援開發與生產環境)
+LOG_SERVER_IP=${LOG_SERVER_IP:-$(ifconfig | grep "inet " | grep -v "127.0.0.1" | head -1 | awk '{print $2}')}
+if [ -z "$LOG_SERVER_IP" ]; then
+    LOG_SERVER_IP="localhost"
+    echo "⚠️  無法檢測網路 IP，使用預設 localhost"
+else
+    echo "🌍 檢測到網路 IP: $LOG_SERVER_IP"
+fi
+
 echo "🔄 正在重啟 $SERVICE_NAME..."
 
 # 檢查端口是否被占用
@@ -50,13 +59,14 @@ if kill -0 $NEW_PID 2>/dev/null; then
     echo "✅ 服務已啟動 (PID: $NEW_PID)"
     
     # 測試健康檢查
-    if curl -s --connect-timeout 5 http://localhost:$PORT/api/health > /dev/null; then
+    if curl -s --connect-timeout 5 http://$LOG_SERVER_IP:$PORT/api/health > /dev/null; then
         echo "✅ 健康檢查通過"
-        echo "🌐 服務地址: http://localhost:$PORT"
-        echo "📊 儀表板: http://localhost:$PORT"
+        echo "🌐 服務地址: http://$LOG_SERVER_IP:$PORT"
+        echo "📊 儀表板: http://$LOG_SERVER_IP:$PORT"
+        echo "📱 模擬器連接地址: http://$LOG_SERVER_IP:$PORT"
         
         # 發送測試日誌
-        curl -X POST http://localhost:$PORT/api/logs \
+        curl -X POST http://$LOG_SERVER_IP:$PORT/api/logs \
              -H "Content-Type: application/json" \
              -d '{"level": "info", "message": "服務重啟成功", "service": "restart-script"}' \
              > /dev/null 2>&1

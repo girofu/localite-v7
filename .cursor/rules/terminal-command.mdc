@@ -4,6 +4,20 @@ alwaysApply: true
 
 ## 📋 終端機指令規範 (新增)
 
+### 環境變數配置
+
+```bash
+# 日誌服務器 IP 配置 (根據環境調整)
+export LOG_SERVER_IP=192.168.1.110    # 開發環境 - 本機 IP
+# export LOG_SERVER_IP=10.0.0.100     # 測試環境 - 測試服務器 IP
+# export LOG_SERVER_IP=your-domain.com # 生產環境 - 生產服務器域名
+
+# 使用方式：
+# 1. 開發環境：LOG_SERVER_IP=192.168.1.110 curl -s http://$LOG_SERVER_IP:5001/api/health
+# 2. 測試環境：LOG_SERVER_IP=test-server.com curl -s http://$LOG_SERVER_IP:5001/api/health
+# 3. 生產環境：LOG_SERVER_IP=prod-logs.yourcompany.com curl -s http://$LOG_SERVER_IP:5001/api/health
+```
+
 ### 標準化指令集
 
 所有終端機操作必須遵循以下標準指令集：
@@ -201,7 +215,7 @@ npx pod-install                              # iOS Pods 重新安裝 (iOS)
 
 ```bash
 # 日誌系統啟動與停止
-cd /Users/fuchangwei/Projects/localite-v7/localite-logs-dashboard
+cd localite-logs-dashboard
 npm start                                    # 啟動完整日誌管理系統
 node server/server.js                        # 單獨啟動後端服務器
 node server/server.js &                      # 背景啟動服務器
@@ -213,59 +227,60 @@ pkill -9 -f "server/server.js"              # 強制停止服務器
 bash localite-logs-dashboard/scripts/restart-logs-server.sh  # 從根目錄執行重啟腳本
 
 # 日誌系統狀態檢查
-curl -s http://localhost:5001/api/health     # 健康檢查與系統狀態
+LOG_SERVER_IP=${LOG_SERVER_IP:-192.168.1.110}  # 設定日誌服務器 IP
+curl -s http://$LOG_SERVER_IP:5001/api/health     # 健康檢查與系統狀態
 lsof -i :5001                               # 檢查端口 5001 佔用情況
 ps aux | grep "server/server.js" | grep -v grep  # 檢查服務器進程狀態
-curl -s http://localhost:5001 > /dev/null && echo "✅ Dashboard 正常" || echo "❌ Dashboard 異常"
+curl -s http://$LOG_SERVER_IP:5001 > /dev/null && echo "✅ Dashboard 正常" || echo "❌ Dashboard 異常"
 
 # 日誌推送 API 指令
-curl -X POST http://localhost:5001/api/logs \
+curl -X POST http://$LOG_SERVER_IP:5001/api/logs \
   -H "Content-Type: application/json" \
   -d '{"level": "info", "message": "測試訊息", "service": "test"}'  # 推送一般資訊日誌
 
-curl -X POST http://localhost:5001/api/logs \
+curl -X POST http://$LOG_SERVER_IP:5001/api/logs \
   -H "Content-Type: application/json" \
   -d '{"level": "error", "message": "錯誤訊息", "service": "app", "metadata": {"error_code": "E001"}}'  # 推送錯誤日誌
 
-curl -X POST http://localhost:5001/api/logs \
+curl -X POST http://$LOG_SERVER_IP:5001/api/logs \
   -H "Content-Type: application/json" \
   -d '{"level": "warn", "message": "警告訊息", "service": "auth", "metadata": {"screen": "RegisterScreen"}}'  # 推送警告日誌
 
 # 日誌查詢指令
-curl -s http://localhost:5001/api/logs                    # 查詢所有日誌
-curl -s "http://localhost:5001/api/logs?limit=50"         # 查詢最近 50 條日誌
-curl -s "http://localhost:5001/api/logs?level=error"      # 查詢錯誤日誌
-curl -s "http://localhost:5001/api/logs?level=warn"       # 查詢警告日誌
-curl -s "http://localhost:5001/api/logs?level=info"       # 查詢資訊日誌
-curl -s "http://localhost:5001/api/logs?service=localite-app"  # 查詢主應用日誌
-curl -s "http://localhost:5001/api/logs?service=auth"     # 查詢認證相關日誌
+curl -s http://$LOG_SERVER_IP:5001/api/logs                    # 查詢所有日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?limit=50"         # 查詢最近 50 條日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?level=error"      # 查詢錯誤日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?level=warn"       # 查詢警告日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?level=info"       # 查詢資訊日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?service=localite-app"  # 查詢主應用日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?service=auth"     # 查詢認證相關日誌
 
 # 複合查詢指令
-curl -s "http://localhost:5001/api/logs?level=error&limit=20"     # 查詢最近 20 條錯誤
-curl -s "http://localhost:5001/api/logs?level=warn&service=auth"  # 查詢認證警告日誌
-curl -s "http://localhost:5001/api/logs?service=register&limit=10" # 查詢註冊相關日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?level=error&limit=20"     # 查詢最近 20 條錯誤
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?level=warn&service=auth"  # 查詢認證警告日誌
+curl -s "http://$LOG_SERVER_IP:5001/api/logs?service=register&limit=10" # 查詢註冊相關日誌
 
 # 日誌分析指令 (需要 jq)
-curl -s http://localhost:5001/api/logs | jq '.[0:5]'      # 格式化顯示最新 5 條
-curl -s http://localhost:5001/api/logs | jq '.[] | select(.level=="error")'  # 只顯示錯誤日誌
-curl -s http://localhost:5001/api/logs | jq '.[] | {level, message, service, timestamp}'  # 簡化顯示
-curl -s http://localhost:5001/api/logs | jq 'group_by(.service) | map({service: .[0].service, count: length})'  # 按服務統計
+curl -s http://$LOG_SERVER_IP:5001/api/logs | jq '.[0:5]'      # 格式化顯示最新 5 條
+curl -s http://$LOG_SERVER_IP:5001/api/logs | jq '.[] | select(.level=="error")'  # 只顯示錯誤日誌
+curl -s http://$LOG_SERVER_IP:5001/api/logs | jq '.[] | {level, message, service, timestamp}'  # 簡化顯示
+curl -s http://$LOG_SERVER_IP:5001/api/logs | jq 'group_by(.service) | map({service: .[0].service, count: length})'  # 按服務統計
 
 # 日誌監控指令
 tail -f localite-logs-dashboard/server/logs/combined.log  # 監控所有日誌文件
 tail -f localite-logs-dashboard/server/logs/error.log     # 監控錯誤日誌文件
-watch -n 2 'curl -s http://localhost:5001/api/health | jq'  # 即時監控系統健康狀態
+watch -n 2 "curl -s http://$LOG_SERVER_IP:5001/api/health | jq"  # 即時監控系統健康狀態
 
 # 日誌測試指令集
-curl -X POST http://localhost:5001/api/logs \
+curl -X POST http://$LOG_SERVER_IP:5001/api/logs \
   -H "Content-Type: application/json" \
   -d '{"level": "info", "message": "系統啟動測試", "service": "startup-test"}'
 
-curl -X POST http://localhost:5001/api/logs \
+curl -X POST http://$LOG_SERVER_IP:5001/api/logs \
   -H "Content-Type: application/json" \
   -d '{"level": "warn", "message": "註冊功能測試", "service": "auth-test", "metadata": {"screen": "RegisterScreen", "action": "button_click"}}'
 
-curl -X POST http://localhost:5001/api/logs \
+curl -X POST http://$LOG_SERVER_IP:5001/api/logs \
   -H "Content-Type: application/json" \
   -d '{"level": "error", "message": "模擬應用錯誤", "service": "error-test", "metadata": {"error_code": "APP_ERROR", "component": "RegisterScreen"}}'
 

@@ -20,6 +20,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { SharedAuthStyles, AuthGradientColors } from './shared/AuthStyles';
+import EmailVerificationScreen from './EmailVerificationScreen';
 
 interface HybridRegisterScreenProps {
   navigation?: {
@@ -42,6 +43,10 @@ export const HybridRegisterScreen: React.FC<HybridRegisterScreenProps> = ({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // 🟢 Green：Email 驗證狀態
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  
   const { signUp } = useAuth();
 
   // 新系統的註冊處理邏輯
@@ -63,8 +68,22 @@ export const HybridRegisterScreen: React.FC<HybridRegisterScreenProps> = ({
 
     try {
       setLoading(true);
-      await signUp(email.trim(), password);
-      // 註冊成功後會由 AuthContext 自動處理導航
+      // 🟢 Green：處理新的 signUp 返回值
+      const result = await signUp(email.trim(), password);
+      
+      if (result.needsEmailVerification) {
+        // 需要 email 驗證，顯示驗證畫面
+        setRegisteredEmail(result.email);
+        setNeedsEmailVerification(true);
+        Alert.alert(
+          '註冊成功', 
+          `驗證信已發送到 ${result.email}，請檢查您的信箱並點擊驗證連結`,
+          [{ text: '確定' }]
+        );
+      } else {
+        // Email 已驗證，直接完成註冊（由 AuthContext 自動處理導航）
+        Alert.alert('註冊成功', '歡迎加入 Localite！');
+      }
     } catch (error: any) {
       console.error('Register error:', error);
       Alert.alert('註冊失敗', error.message || '註冊過程中發生錯誤');
@@ -84,6 +103,23 @@ export const HybridRegisterScreen: React.FC<HybridRegisterScreenProps> = ({
   const handleLoginPress = () => {
     navigation?.navigate('Login');
   };
+
+  // 🟢 Green：Email 驗證完成處理
+  const handleVerificationComplete = () => {
+    setNeedsEmailVerification(false);
+    // 驗證完成後會由 AuthContext.reloadUser 自動設置用戶狀態並導航
+  };
+
+  // 🟢 Green：根據驗證狀態決定顯示的畫面
+  if (needsEmailVerification) {
+    return (
+      <EmailVerificationScreen
+        email={registeredEmail}
+        onClose={handleBackPress}
+        onVerificationComplete={handleVerificationComplete}
+      />
+    );
+  }
 
   return (
     <LinearGradient

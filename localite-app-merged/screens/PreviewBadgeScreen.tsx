@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { BADGES_BY_TYPE, Badge } from '../data/badges';
 import BadgeModal from '../components/BadgeModal';
+import { ScreenType } from '../src/types/navigation.types';
 
 interface PreviewBadgeScreenProps {
   onClose: () => void;
-  onNavigate: (screen: string) => void;
+  onNavigate: (screen: ScreenType) => void;
 }
 
 const { width: screenWidth } = Dimensions.get('window');

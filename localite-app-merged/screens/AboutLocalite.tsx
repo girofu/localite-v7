@@ -51,7 +51,7 @@ export default function AboutLocalite({ onBack, onNavigateToNews, onNavigateToPr
         {/* Logo and App Name */}
         <View style={styles.logoContainer}>
           <Image source={require('../assets/logo/logo-light.png')} style={styles.logo} />
-          <Text style={styles.version}>版本 : V1.0.0</Text>
+          <Text style={styles.version}>版本 : V1.0.3</Text>
         </View>
 
         {/* Description Box */}
@@ -91,7 +91,11 @@ export default function AboutLocalite({ onBack, onNavigateToNews, onNavigateToPr
 
           <TouchableOpacity style={styles.interactiveItem}>
             <Image source={require('../assets/icons/icon_website.png')} style={styles.itemIcon} />
-            <Text style={styles.itemText}>Localite 官網</Text>
+            <View style={styles.textContainer}>
+              <View style={styles.textWithDotContainer}>
+                <Text style={styles.itemText}>Localite 官網</Text>
+              </View>
+            </View>
             <Image source={require('../assets/icons/icon_angle-right.png')} style={styles.arrowIcon} />
           </TouchableOpacity>
         </View>

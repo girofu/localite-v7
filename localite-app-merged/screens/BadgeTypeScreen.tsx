@@ -16,7 +16,7 @@ const badgeItemWidth = (screenWidth - 48) / 2; // 兩列佈局，考慮間距
 
 interface BadgeTypeScreenProps {
   onClose: () => void;
-  onNavigate: (screen: 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'journeyGen' | 'learningSheetsList' | 'badge' | 'aboutLocalite' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation' | 'previewBadge' | 'badgeType' | 'badgeDetail', badgeType?: string, badge?: Badge) => void;
+  onNavigate: (screen: 'home' | 'guide' | 'qr' | 'map' | 'mapLocation' | 'placeIntro' | 'guideSelect' | 'chat' | 'learningSheet' | 'journeyDetail' | 'journeyMain' | 'journeyGen' | 'learningSheetsList' | 'badge' | 'aboutLocalite' | 'miniCardPreview' | 'buttonOptionPreview' | 'buttonCameraPreview' | 'exhibitCardPreview' | 'login' | 'signup' | 'chatEnd' | 'drawerNavigation' | 'previewBadge' | 'badgeType' | 'badgeDetail', params?: any) => void;
   badgeType: string;
   isLoggedIn?: boolean;
 }
@@ -69,7 +69,7 @@ export default function BadgeTypeScreen({ onClose, onNavigate, badgeType, isLogg
       style={styles.badgeItem}
       onPress={() => {
         if (isUnlocked) {
-          onNavigate('badgeDetail', undefined, badge);
+          onNavigate('badgeDetail', badge);
         }
       }}
       activeOpacity={isUnlocked ? 0.8 : 1}

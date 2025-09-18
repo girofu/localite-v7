@@ -6,7 +6,22 @@ import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
 import "./App.css";
 
-const socket = io("http://localhost:5001");
+// 動態檢測服務器地址
+const getServerUrl = () => {
+  // 如果是開發環境，優先使用環境變數或當前主機
+  if (process.env.NODE_ENV === "development") {
+    return (
+      process.env.REACT_APP_SERVER_URL ||
+      `http://${window.location.hostname}:5001`
+    );
+  }
+  // 生產環境使用當前主機
+  return `http://${window.location.hostname}:5001`;
+};
+
+const serverUrl = getServerUrl();
+console.log("🔌 連接到日誌服務器:", serverUrl);
+const socket = io(serverUrl);
 
 function App() {
   const [logs, setLogs] = useState([]);

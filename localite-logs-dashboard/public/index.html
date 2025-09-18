@@ -283,7 +283,15 @@
 
     <script>
         // 連接到 Socket.IO 服務器
-        const socket = io('http://localhost:5001');
+        // 動態檢測服務器地址
+        const getServerUrl = () => {
+            // 使用當前瀏覽器的主機名和端口 5001
+            return `http://${window.location.hostname}:5001`;
+        };
+        
+        const serverUrl = getServerUrl();
+        console.log('🔌 連接到日誌服務器:', serverUrl);
+        const socket = io(serverUrl);
         
         // 日誌存儲
         let logs = [];
